@@ -1,0 +1,34 @@
+@'
+# ---- Python/Django
+__pycache__/
+*.py[cod]
+*.log
+*.pot
+.env
+.env.*
+.venv/
+venv/
+db.sqlite3
+
+# Media y secretos (dejamos los placeholders)
+backend/media/*
+!backend/media/.gitignore
+backend/secrets/*
+!backend/secrets/.keep
+
+# Static compilado (si lo usás en prod)
+staticfiles/
+
+# ---- Node/Angular
+node_modules/
+dist/
+.angular/
+tmp/
+coverage/
+
+# ---- IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+'@ | Out-File -Encoding UTF8 .gitignore

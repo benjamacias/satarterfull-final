@@ -1,0 +1,60 @@
+<section class="card">
+  <h2>Consulta inteligente de CPE</h2>
+  <p class="helper-text">Recuperá la información completa de la carta de porte ingresando el número de CTG.</p>
+  <form class="grid two-columns" (ngSubmit)="buscar()">
+    <div>
+      <label for="ctg">Número de CTG</label>
+      <input id="ctg" [(ngModel)]="nro_ctg" name="ctg" maxlength="14" placeholder="Ej: 00012345678901" />
+      <p class="helper-text">Se admiten 12 a 14 dígitos sin guiones.</p>
+    </div>
+    <div class="align-end">
+      <button type="submit" [disabled]="loading || !nro_ctg.trim()">
+        {{ loading ? 'Consultando…' : 'Consultar CPE' }}
+      </button>
+    </div>
+  </form>
+  <p *ngIf="lastQuery" class="helper-text">Última consulta realizada: <strong>{{ lastQuery }}</strong></p>
+</section>
+
+<section class="card" *ngIf="resultado && !loading">
+  <h3>Resultado de la consulta</h3>
+  <div class="grid two-columns">
+    <div>
+      <label>Estado</label>
+      <div class="status">
+        <span class="status-dot" [ngClass]="{
+          'success': estadoBadge(resultado.estado) === 'success',
+          'pending': estadoBadge(resultado.estado) === 'warning'
+        }"></span>
+        <span class="badge" [ngClass]="estadoBadge(resultado.estado)">
+          {{ resultado.estado || 'Sin estado informado' }}
+        </span>
+      </div>
+    </div>
+    <div>
+      <label>Tipo de carta de porte</label>
+      <div class="tag">{{ resultado.tipo_carta_porte || 'No informado' }}</div>
+    </div>
+    <div>
+      <label>Sucursal / Orden</label>
+      <div>{{ resultado.sucursal || '—' }} / {{ resultado.nro_orden || '—' }}</div>
+    </div>
+    <div>
+      <label>Vigencia</label>
+      <div>
+        <strong>Desde:</strong>
+        {{ resultado.fecha_emision | date: 'dd/MM/yyyy HH:mm' : 'UTC' }}<br />
+        <strong>Hasta:</strong>
+        {{ resultado.fecha_vencimiento | date: 'dd/MM/yyyy HH:mm' : 'UTC' }}
+      </div>
+    </div>
+  </div>
+  <details>
+    <summary>Ver respuesta completa</summary>
+    <pre class="pretty-json">{{ resultado | json }}</pre>
+  </details>
+</section>
+
+<section class="card empty-state" *ngIf="!resultado && !loading">
+  <p>Ingresá un CTG para obtener los datos de transporte y compartirlos con tu equipo.</p>
+</section>

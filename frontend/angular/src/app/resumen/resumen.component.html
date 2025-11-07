@@ -1,0 +1,98 @@
+<section class="card">
+  <h2>Clientes registrados</h2>
+  <p class="helper-text">Administrá los datos fiscales desde aquí para reutilizarlos al emitir facturas.</p>
+
+  <div class="card-inline">
+    <h3>Agregar nuevo cliente</h3>
+    <div class="grid two-columns">
+      <div>
+        <label for="nuevoNombre">Nombre y apellido / Razón social</label>
+        <input id="nuevoNombre" [(ngModel)]="nuevoCliente.name" name="nuevoClienteNombre" placeholder="Ej: Juan Pérez" />
+      </div>
+      <div>
+        <label for="nuevoEmail">Email de contacto</label>
+        <input id="nuevoEmail" type="email" [(ngModel)]="nuevoCliente.email" name="nuevoClienteEmail" placeholder="Ej: facturacion@cliente.com" />
+      </div>
+      <div>
+        <label for="nuevoCuit">Número de CUIT</label>
+        <input id="nuevoCuit" [(ngModel)]="nuevoCliente.tax_id" name="nuevoClienteCuit" placeholder="Ej: 30-12345678-9" />
+      </div>
+      <div>
+        <label for="nuevoDomicilio">Dirección fiscal</label>
+        <input id="nuevoDomicilio" [(ngModel)]="nuevoCliente.fiscal_address" name="nuevoClienteDomicilio" placeholder="Ej: Av. Siempre Viva 742" />
+      </div>
+      <div>
+        <label for="nuevoCondicion">Condición fiscal</label>
+        <select id="nuevoCondicion" [(ngModel)]="nuevoCliente.tax_condition" name="nuevoClienteCondicion">
+          <option *ngFor="let cond of taxConditionOptions" [value]="cond.value">{{ cond.label }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="align-end">
+      <button type="button" (click)="guardarCliente()" [disabled]="creandoCliente">
+        {{ creandoCliente ? 'Guardando cliente…' : 'Guardar cliente' }}
+      </button>
+    </div>
+    <p *ngIf="mensajeCliente" class="helper-text success">{{ mensajeCliente }}</p>
+  </div>
+
+  <div *ngIf="loadingClientes" class="empty-state">Cargando clientes…</div>
+  <div *ngIf="!loadingClientes && !clientes.length" class="empty-state">
+    Todavía no registraste clientes. Completá el formulario superior para agregarlos.
+  </div>
+  <div *ngIf="!loadingClientes && clientes.length" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>CUIT</th>
+          <th>Condición fiscal</th>
+          <th>Dirección fiscal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let cliente of clientes">
+          <td>{{ cliente.name }}</td>
+          <td>{{ cliente.email }}</td>
+          <td>{{ cliente.tax_id }}</td>
+          <td>{{ cliente.tax_condition_display }}</td>
+          <td>{{ cliente.fiscal_address }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Datos de envíos (CPE)</h2>
+  <div *ngIf="loadingEnvios" class="empty-state">Cargando envíos…</div>
+  <div *ngIf="!loadingEnvios && !envios.length" class="empty-state">
+    Aún no consultaste cartas de porte. Realizá una búsqueda desde la sección "Consulta CPE".
+  </div>
+  <div *ngIf="!loadingEnvios && envios.length" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>CTG</th>
+          <th>Estado</th>
+          <th>Vigencia</th>
+          <th>Sucursal / Orden</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let envio of envios">
+          <td><strong>{{ envio.nro_ctg }}</strong></td>
+          <td>
+            <span class="badge" [ngClass]="envio.estado ? 'info' : 'warning'">{{ envio.estado || 'Sin estado' }}</span>
+          </td>
+          <td>
+            <div class="helper-text">Desde {{ envio.fecha_emision | date:'dd/MM/yyyy HH:mm' }}</div>
+            <div class="helper-text">Hasta {{ envio.fecha_vencimiento | date:'dd/MM/yyyy HH:mm' }}</div>
+          </td>
+          <td>{{ envio.sucursal || '—' }} / {{ envio.nro_orden || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

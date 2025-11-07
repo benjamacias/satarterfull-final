@@ -1,0 +1,18 @@
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">Count</span>
+    <span class="brand-highlight">Sistem</span>
+  </div>
+  <nav class="main-nav">
+    <a routerLink="/cpe" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Consulta CPE</a>
+    <a routerLink="/facturar" routerLinkActive="active">Emitir factura</a>
+    <a routerLink="/facturas" routerLinkActive="active">Comprobantes</a>
+    <a routerLink="/resumen" routerLinkActive="active">Clientes &amp; Envíos</a>
+  </nav>
+</header>
+<main class="app-content">
+  <router-outlet></router-outlet>
+</main>
+<footer class="app-footer">
+  <small>Gestión inteligente de comprobantes y logística</small>
+</footer>

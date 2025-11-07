@@ -1,0 +1,79 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  background: linear-gradient(135deg, #1a2238, #0d1b2a);
+  color: #f8fafc;
+  box-shadow: 0 10px 25px rgba(13, 27, 42, 0.35);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.brand-mark {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.brand-highlight {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.main-nav {
+  display: flex;
+  gap: 1.25rem;
+  font-weight: 500;
+}
+
+.main-nav a {
+  position: relative;
+  color: #e0f2fe;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.main-nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.35rem;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  transition: background 0.25s ease;
+}
+
+.main-nav a:hover,
+.main-nav a.active {
+  color: #38bdf8;
+}
+
+.main-nav a.active::after,
+.main-nav a:hover::after {
+  background: #38bdf8;
+}
+
+.app-content {
+  padding: 2rem;
+  min-height: calc(100vh - 210px);
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.app-footer {
+  text-align: center;
+  padding: 1.5rem 2rem;
+  background: #0f172a;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}

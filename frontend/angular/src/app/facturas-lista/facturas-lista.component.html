@@ -1,0 +1,46 @@
+<section class="card">
+  <h2>Comprobantes emitidos</h2>
+  <p class="helper-text">Visualizá el estado de tus facturas y reenviá el comprobante en un solo paso.</p>
+  <div *ngIf="loading" class="empty-state">Cargando facturas…</div>
+  <div *ngIf="!loading && items.length === 0" class="empty-state">
+    No hay comprobantes emitidos todavía. Emití uno desde la sección de facturación.
+  </div>
+  <div *ngIf="!loading && items.length" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Comprobante</th>
+          <th>Cliente</th>
+          <th>CAE</th>
+          <th>Fecha</th>
+          <th>PDF</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let f of items">
+          <td>
+            <div class="tag">{{f.cbte_tipo}}-{{f.pto_vta}}-{{f.cbte_nro || 's/n'}} </div>
+            <div class="helper-text">Monto: {{ f.amount | currency:'ARS':'symbol':'1.2-2' }}</div>
+          </td>
+          <td>
+            <strong>{{f.client_name}}</strong><br />
+            <span class="helper-text">{{f.client_email}}</span>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="f.cae ? 'success' : 'warning'">{{ f.cae || 'Pendiente' }}</span>
+            <div class="helper-text" *ngIf="f.cae_due">Vence: {{ f.cae_due | date:'dd/MM/yyyy' }}</div>
+          </td>
+          <td>{{ f.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>
+            <a *ngIf="f.pdf" [href]="f.pdf" target="_blank">Descargar</a>
+            <span *ngIf="!f.pdf" class="helper-text">Generando…</span>
+          </td>
+          <td>
+            <button type="button" (click)="enviar(f.id)">Enviar por mail</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
