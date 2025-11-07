@@ -65,6 +65,100 @@
 </section>
 
 <section class="card">
+  <h2>Proveedores registrados</h2>
+  <p class="helper-text">Guardá los datos de los transportistas o proveedores para vincularlos rápidamente con las cartas de porte.</p>
+
+  <div class="card-inline">
+    <h3>Agregar nuevo proveedor</h3>
+    <div class="grid two-columns">
+      <div>
+        <label for="nuevoProveedorNombre">Nombre / Razón social</label>
+        <input id="nuevoProveedorNombre" [(ngModel)]="nuevoProveedor.name" name="nuevoProveedorNombre" placeholder="Ej: Transporte SRL" />
+      </div>
+      <div>
+        <label for="nuevoProveedorEmail">Email de contacto</label>
+        <input id="nuevoProveedorEmail" type="email" [(ngModel)]="nuevoProveedor.email" name="nuevoProveedorEmail" placeholder="Ej: contacto@proveedor.com" />
+      </div>
+      <div>
+        <label for="nuevoProveedorCuit">CUIT</label>
+        <input id="nuevoProveedorCuit" [(ngModel)]="nuevoProveedor.tax_id" name="nuevoProveedorCuit" placeholder="Ej: 30-00000000-0" />
+      </div>
+      <div>
+        <label for="nuevoProveedorDomicilio">Dirección fiscal</label>
+        <input id="nuevoProveedorDomicilio" [(ngModel)]="nuevoProveedor.fiscal_address" name="nuevoProveedorDomicilio" placeholder="Ej: Ruta 8 km 201" />
+      </div>
+    </div>
+    <div class="align-end">
+      <button type="button" (click)="guardarProveedor()" [disabled]="creandoProveedor">
+        {{ creandoProveedor ? 'Guardando proveedor…' : 'Guardar proveedor' }}
+      </button>
+    </div>
+    <p *ngIf="mensajeProveedor" class="helper-text success">{{ mensajeProveedor }}</p>
+  </div>
+
+  <div *ngIf="loadingProveedores" class="empty-state">Cargando proveedores…</div>
+  <div *ngIf="!loadingProveedores && !proveedores.length" class="empty-state">
+    Todavía no registraste proveedores. Completá el formulario superior para agregarlos.
+  </div>
+  <div *ngIf="!loadingProveedores && proveedores.length" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>CUIT</th>
+          <th>Dirección fiscal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let proveedor of proveedores">
+          <td>{{ proveedor.name }}</td>
+          <td>{{ proveedor.email || '—' }}</td>
+          <td>{{ proveedor.tax_id || '—' }}</td>
+          <td>{{ proveedor.fiscal_address || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Tarifas por producto</h2>
+  <p class="helper-text">Configurá los valores sugeridos que luego se aplicarán automáticamente al revisar las cartas de porte.</p>
+
+  <div *ngIf="loadingProductos" class="empty-state">Cargando productos…</div>
+  <div *ngIf="!loadingProductos && !productos.length" class="empty-state">
+    Aún no se detectaron productos en las cartas de porte consultadas.
+  </div>
+  <div *ngIf="!loadingProductos && productos.length" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Código AFIP</th>
+          <th>Tarifa base</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let producto of productos">
+          <td>{{ producto.name }}</td>
+          <td>{{ producto.afip_code || '—' }}</td>
+          <td>
+            <input type="number" min="0" step="0.01" [(ngModel)]="edicionProductos[producto.id]" name="tarifaProducto{{ producto.id }}" />
+          </td>
+          <td>
+            <button type="button" (click)="actualizarTarifaProducto(producto)" [disabled]="actualizandoProducto[producto.id]">
+              {{ actualizandoProducto[producto.id] ? 'Guardando…' : 'Actualizar tarifa' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
   <h2>Datos de envíos (CPE)</h2>
   <div *ngIf="loadingEnvios" class="empty-state">Cargando envíos…</div>
   <div *ngIf="!loadingEnvios && !envios.length" class="empty-state">

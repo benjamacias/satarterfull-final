@@ -20,6 +20,25 @@ class Client(models.Model):
     def __str__(self):
         return f"{self.name} <{self.email}>"
 
+
+class Provider(models.Model):
+    name = models.CharField(max_length=120)
+    email = models.EmailField(blank=True, default="")
+    tax_id = models.CharField(max_length=20, default="", blank=True)
+    fiscal_address = models.CharField(max_length=255, default="", blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Product(models.Model):
+    name = models.CharField(max_length=120)
+    afip_code = models.CharField(max_length=50, null=True, blank=True, unique=True)
+    default_tariff = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return self.name
+
 class Invoice(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="invoices")
     amount = models.DecimalField(max_digits=12, decimal_places=2)

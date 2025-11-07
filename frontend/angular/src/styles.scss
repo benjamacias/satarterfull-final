@@ -44,6 +44,15 @@ section.card h3 {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.grid.no-gap {
+  gap: 0.5rem;
+}
+
+.grid.no-gap.two-columns {
+  grid-template-columns: minmax(140px, 1fr) auto;
+  align-items: center;
+}
+
 label {
   font-size: 0.85rem;
   font-weight: 600;
