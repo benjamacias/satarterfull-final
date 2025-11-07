@@ -1,0 +1,145 @@
+<section class="card">
+  <h2>Facturar cartas de porte</h2>
+  <p class="helper-text">Seleccioná un cliente para ver sus cartas de porte y armar la factura automáticamente.</p>
+
+  <div class="grid two-columns">
+    <div>
+      <label for="clienteCpe">Cliente</label>
+      <select
+        id="clienteCpe"
+        name="clienteCpe"
+        [disabled]="loadingClientes"
+        [(ngModel)]="modeloFactura.client_id"
+        (ngModelChange)="seleccionarCliente($event)"
+      >
+        <option [ngValue]="null">Seleccioná un cliente…</option>
+        <option *ngFor="let client of clientes" [ngValue]="client.id">{{ client.name }} — {{ client.tax_id }}</option>
+      </select>
+      <p class="helper-text" *ngIf="loadingClientes">Cargando clientes…</p>
+      <p class="helper-text">¿Necesitás registrar un nuevo cliente? Desde <a routerLink="/resumen">Clientes &amp; Envíos</a> podés hacerlo.</p>
+    </div>
+    <div *ngIf="selectedClient" class="card-inline">
+      <h3>Datos seleccionados</h3>
+      <p><strong>{{ selectedClient.name }}</strong></p>
+      <p class="helper-text">{{ selectedClient.email }} — {{ selectedClient.tax_condition_display }}</p>
+      <p class="helper-text">Domicilio fiscal: {{ selectedClient.fiscal_address }}</p>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h3>Cartas de porte del cliente</h3>
+  <div *ngIf="loadingCpes" class="empty-state">Buscando cartas de porte…</div>
+  <div *ngIf="!loadingCpes && !cpes.length" class="empty-state">
+    Seleccioná un cliente para ver las CPE disponibles.
+  </div>
+  <div *ngIf="!loadingCpes && cpes.length" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>CTG</th>
+          <th>Fecha emisión</th>
+          <th>N° orden</th>
+          <th>Producto</th>
+          <th>Procedencia</th>
+          <th>Destino</th>
+          <th>Peso bruto</th>
+          <th>Tarifa</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let cpe of cpes; let idx = index">
+          <td>
+            <input
+              type="checkbox"
+              [checked]="cpe.selected"
+              (change)="alternarSeleccion(cpe, $event.target.checked)"
+            />
+          </td>
+          <td><strong>{{ cpe.nro_ctg }}</strong></td>
+          <td>{{ cpe.fecha_emision | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ cpe.nro_orden || '—' }}</td>
+          <td>{{ cpe.product_name || cpe.product_description || '—' }}</td>
+          <td>{{ cpe.procedencia || '—' }}</td>
+          <td>{{ cpe.destino || '—' }}</td>
+          <td>{{ cpe.peso_bruto_descarga || '—' }}</td>
+          <td>
+            <div class="grid no-gap two-columns">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                [(ngModel)]="cpe.editingTariff"
+                name="tarifa{{ idx }}"
+              />
+              <button type="button" (click)="guardarTarifa(cpe)" [disabled]="cpe.updatingTariff">
+                {{ cpe.updatingTariff ? 'Guardando…' : 'Actualizar' }}
+              </button>
+            </div>
+          </td>
+          <td>{{ obtenerTotalCpe(cpe) | currency:'ARS':'symbol':'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card" *ngIf="selectedClient">
+  <h3>Resumen de factura</h3>
+  <div class="grid two-columns">
+    <div>
+      <label>Importe total</label>
+      <div class="status">
+        <span class="status-dot success"></span>
+        <div>
+          <div><strong>Monto:</strong> {{ modeloFactura.amount | currency:'ARS':'symbol':'1.2-2' }}</div>
+          <div><strong>CPE seleccionadas:</strong> {{ cpes.filter(c => c.selected).length }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid two-columns">
+      <div>
+        <label for="ptoVtaCpe">Punto de venta</label>
+        <input id="ptoVtaCpe" type="number" min="0" [(ngModel)]="modeloFactura.pto_vta" name="ptoVtaCpe" />
+      </div>
+      <div>
+        <label for="cbteTipoCpe">Tipo de comprobante</label>
+        <select id="cbteTipoCpe" [(ngModel)]="modeloFactura.cbte_tipo" name="cbteTipoCpe">
+          <option [value]="11">Factura C</option>
+          <option [value]="6">Factura B</option>
+          <option [value]="1">Factura A</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="align-end">
+    <button type="button" (click)="emitirFactura()" [disabled]="facturando || !cpes.some(c => c.selected)">
+      {{ facturando ? 'Emitiendo…' : 'Emitir factura' }}
+    </button>
+  </div>
+</section>
+
+<section class="card" *ngIf="respuesta">
+  <h3>Factura emitida correctamente</h3>
+  <div class="grid two-columns">
+    <div>
+      <label>Comprobante</label>
+      <div class="tag">{{ respuesta.cbte_tipo }}-{{ respuesta.pto_vta }}-{{ respuesta.cbte_nro || 's/n' }}</div>
+    </div>
+    <div>
+      <label>CAE</label>
+      <div class="badge success">{{ respuesta.cae }}</div>
+    </div>
+    <div>
+      <label>Importe</label>
+      <div>{{ respuesta.amount | currency:'ARS':'symbol':'1.2-2' }}</div>
+    </div>
+    <div>
+      <label>Cliente</label>
+      <div>{{ respuesta.client_name }} ({{ respuesta.client_email }})</div>
+    </div>
+  </div>
+  <p class="helper-text">Encontrá el comprobante emitido en la sección de comprobantes para descargarlo o enviarlo por correo.</p>
+</section>

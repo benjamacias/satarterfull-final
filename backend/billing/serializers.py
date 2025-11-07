@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from billing.models import Client, Invoice
+from billing.models import Client, Invoice, Product, Provider
 from trips.models import CPEAutomotor
 
 class CPERequestSerializer(serializers.Serializer):
@@ -89,3 +89,84 @@ class CPEListSerializer(serializers.ModelSerializer):
             "sucursal",
             "nro_orden",
         ]
+
+
+class ProviderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Provider
+        fields = ["id", "name", "email", "tax_id", "fiscal_address"]
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ["id", "name", "afip_code", "default_tariff"]
+
+
+class CPEInvoiceSerializer(serializers.ModelSerializer):
+    client_id = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+    provider_id = serializers.SerializerMethodField()
+    provider_name = serializers.SerializerMethodField()
+    product_id = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    product_code = serializers.SerializerMethodField()
+    total_amount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CPEAutomotor
+        fields = [
+            "id",
+            "nro_ctg",
+            "fecha_emision",
+            "nro_orden",
+            "product_description",
+            "procedencia",
+            "destino",
+            "peso_bruto_descarga",
+            "tariff",
+            "total_amount",
+            "client_id",
+            "client_name",
+            "provider_id",
+            "provider_name",
+            "product_id",
+            "product_name",
+            "product_code",
+        ]
+
+    def get_total_amount(self, obj: CPEAutomotor):
+        if obj.tariff is None:
+            return None
+        if obj.peso_bruto_descarga in (None, 0):
+            return obj.tariff
+        return obj.tariff * obj.peso_bruto_descarga
+
+    def get_client_id(self, obj: CPEAutomotor):
+        return obj.client_id
+
+    def get_client_name(self, obj: CPEAutomotor):
+        return obj.client.name if obj.client else None
+
+    def get_provider_id(self, obj: CPEAutomotor):
+        return obj.provider_id
+
+    def get_provider_name(self, obj: CPEAutomotor):
+        return obj.provider.name if obj.provider else None
+
+    def get_product_id(self, obj: CPEAutomotor):
+        return obj.product_id
+
+    def get_product_name(self, obj: CPEAutomotor):
+        if obj.product:
+            return obj.product.name
+        return obj.product_description or None
+
+    def get_product_code(self, obj: CPEAutomotor):
+        if obj.product:
+            return obj.product.afip_code
+        return None
+
+
+class CPETariffUpdateSerializer(serializers.Serializer):
+    tariff = serializers.DecimalField(max_digits=12, decimal_places=2)

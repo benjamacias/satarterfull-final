@@ -8,17 +8,19 @@ import { CpeConsultaComponent } from './cpe-consulta/cpe-consulta.component';
 import { FacturarComponent } from './facturar/facturar.component';
 import { FacturasListaComponent } from './facturas-lista/facturas-lista.component';
 import { ResumenComponent } from './resumen/resumen.component';
+import { FacturaCpeComponent } from './factura-cpe/factura-cpe.component';
 
 const routes: Routes = [
   { path: "", redirectTo: "cpe", pathMatch: "full" },
   { path: "cpe", component: CpeConsultaComponent },
   { path: "facturar", component: FacturarComponent },
+  { path: "facturar/cpe", component: FacturaCpeComponent },
   { path: "facturas", component: FacturasListaComponent },
   { path: "resumen", component: ResumenComponent },
 ];
 
 @NgModule({
-  declarations: [AppComponent, CpeConsultaComponent, FacturarComponent, FacturasListaComponent, ResumenComponent],
+  declarations: [AppComponent, CpeConsultaComponent, FacturarComponent, FacturasListaComponent, ResumenComponent, FacturaCpeComponent],
   imports: [BrowserModule, HttpClientModule, FormsModule, RouterModule.forRoot(routes)],
   providers: [],
   bootstrap: [AppComponent]
