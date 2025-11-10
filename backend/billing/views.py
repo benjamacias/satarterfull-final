@@ -35,15 +35,13 @@ class FacturacionViewSet(viewsets.ViewSet):
         s = CPERequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         try:
-            consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
+            cpe = consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
         except Exception as exc:  # pragma: no cover - defensive, depends on AFIP API
             return Response(
                 {"detail": f"No fue posible consultar la carta de porte: {exc}"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        nro_ctg = str(s.validated_data["nro_ctg"]).strip()
-        cpe = get_object_or_404(CPEAutomotor, nro_ctg=nro_ctg)
         return Response(CPESerializer(cpe).data)
 
     @action(detail=False, methods=["post"], url_path="facturas/emitir")

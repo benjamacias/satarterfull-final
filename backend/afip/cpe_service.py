@@ -120,7 +120,7 @@ def _match_by_tax_id(model, tax_id_value):
     return None
 
 
-def consultar_cpe_por_ctg(nro_ctg: str) -> dict:
+def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
     token, sign = get_token_sign(service="wscpe")
     body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -189,6 +189,7 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> dict:
             "codProducto",
             "codigoProducto",
             "idProducto",
+            "codGrano",
         },
     )
 
@@ -263,4 +264,4 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> dict:
     elif obj.tariff in (None, Decimal("0")) and product and product.default_tariff:
         obj.tariff = product.default_tariff
         obj.save(update_fields=["tariff"])
-    return data
+    return obj
