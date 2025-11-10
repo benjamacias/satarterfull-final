@@ -19,7 +19,6 @@ from billing.serializers import (
     ProviderSerializer,
 )
 from afip.cpe_service import consultar_cpe_por_ctg
-from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
 
 
@@ -46,6 +45,8 @@ class FacturacionViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="facturas/emitir")
     def emitir(self, request):
+        from afip.fe_service import emitir_y_guardar_factura
+
         s = EmitirFacturaSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         client = Client.objects.get(pk=s.validated_data["client_id"])
@@ -113,8 +114,17 @@ class FacturacionViewSet(viewsets.ViewSet):
         qs = Provider.objects.order_by("name")
         return Response(ProviderSerializer(qs, many=True).data)
 
-    @action(detail=False, methods=["get"], url_path="productos")
+    @action(detail=False, methods=["get", "post"], url_path="productos")
     def productos(self, request):
+        if request.method.lower() == "post":
+            serializer = ProductSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            product = serializer.save()
+            return Response(
+                ProductSerializer(product).data,
+                status=status.HTTP_201_CREATED,
+            )
+
         qs = Product.objects.order_by("name")
         return Response(ProductSerializer(qs, many=True).data)
 
