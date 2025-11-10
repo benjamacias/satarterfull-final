@@ -3,6 +3,7 @@ import { ApiService } from '../core/api.service';
 
 @Component({
   selector: 'app-cpe-consulta',
+  standalone: false,
   templateUrl: './cpe-consulta.component.html'
 })
 export class CpeConsultaComponent {

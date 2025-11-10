@@ -9,6 +9,7 @@ interface CpeSeleccionable extends CpeFacturaDetalle {
 
 @Component({
   selector: 'app-factura-cpe',
+  standalone: false,
   templateUrl: './factura-cpe.component.html'
 })
 export class FacturaCpeComponent implements OnInit {
@@ -19,6 +20,7 @@ export class FacturaCpeComponent implements OnInit {
   loadingCpes = false;
   facturando = false;
   respuesta: any = null;
+  selectedCpeCount = 0;
 
   modeloFactura: EnvioFactura = {
     client_id: null,
@@ -127,10 +129,20 @@ export class FacturaCpeComponent implements OnInit {
   }
 
   private actualizarTotales(): void {
-    const total = this.cpes
-      .filter(c => c.selected)
-      .reduce((acum, c) => acum + this.obtenerTotalCpe(c), 0);
+    let count = 0;
+    const total = this.cpes.reduce((acum, c) => {
+      if (c.selected) {
+        count += 1;
+        return acum + this.obtenerTotalCpe(c);
+      }
+      return acum;
+    }, 0);
+    this.selectedCpeCount = count;
     this.modeloFactura.amount = parseFloat(total.toFixed(2));
+  }
+
+  get hayCpeSeleccionadas(): boolean {
+    return this.selectedCpeCount > 0;
   }
 
   guardarTarifa(cpe: CpeSeleccionable): void {
@@ -160,7 +172,7 @@ export class FacturaCpeComponent implements OnInit {
       alert('Seleccioná un cliente y al menos una CPE antes de emitir.');
       return;
     }
-    if (!this.cpes.some(c => c.selected)) {
+    if (!this.selectedCpeCount) {
       alert('Seleccioná al menos una carta de porte para calcular el importe de la factura.');
       return;
     }
