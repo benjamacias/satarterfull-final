@@ -95,7 +95,7 @@
         <span class="status-dot success"></span>
         <div>
           <div><strong>Monto:</strong> {{ modeloFactura.amount | currency:'ARS':'symbol':'1.2-2' }}</div>
-          <div><strong>CPE seleccionadas:</strong> {{ cpes.filter(c => c.selected).length }}</div>
+          <div><strong>CPE seleccionadas:</strong> {{ selectedCpeCount }}</div>
         </div>
       </div>
     </div>
@@ -115,7 +115,7 @@
     </div>
   </div>
   <div class="align-end">
-    <button type="button" (click)="emitirFactura()" [disabled]="facturando || !cpes.some(c => c.selected)">
+      <button type="button" (click)="emitirFactura()" [disabled]="facturando || !hayCpeSeleccionadas">
       {{ facturando ? 'Emitiendo…' : 'Emitir factura' }}
     </button>
   </div>

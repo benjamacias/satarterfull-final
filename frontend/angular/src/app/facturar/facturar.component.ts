@@ -3,6 +3,7 @@ import { ApiService, Client, EnvioFactura } from '../core/api.service';
 
 @Component({
   selector: 'app-facturar',
+  standalone: false,
   templateUrl: './facturar.component.html'
 })
 export class FacturarComponent implements OnInit {

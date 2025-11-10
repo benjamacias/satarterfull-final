@@ -3,6 +3,7 @@ import { ApiService } from '../core/api.service';
 
 @Component({
   selector:'app-facturas-lista',
+  standalone: false,
   templateUrl:'./facturas-lista.component.html'
 })
 export class FacturasListaComponent implements OnInit {

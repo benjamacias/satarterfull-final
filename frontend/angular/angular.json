@@ -36,7 +36,6 @@
       }
     }
   },
-  "defaultProject": "afip-portal",
   "cli": {
     "analytics": "fc80213e-0b1b-4195-9c35-8de4c9b00ce3"
   }

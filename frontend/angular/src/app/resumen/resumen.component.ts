@@ -3,6 +3,7 @@ import { ApiService, Client, EnvioResumen, NuevoCliente, NuevoProveedor, Product
 
 @Component({
   selector: 'app-resumen',
+  standalone: false,
   templateUrl: './resumen.component.html'
 })
 export class ResumenComponent implements OnInit {
