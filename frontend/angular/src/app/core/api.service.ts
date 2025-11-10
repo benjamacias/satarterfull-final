@@ -65,6 +65,12 @@ export interface Producto {
   default_tariff: number;
 }
 
+export interface NuevoProducto {
+  name: string;
+  afip_code: string | null;
+  default_tariff: number;
+}
+
 export interface CpeFacturaDetalle {
   id: number;
   nro_ctg: string;
@@ -129,8 +135,12 @@ export class ApiService {
     return this.http.get<Producto[]>(`${API_BASE}/productos/`);
   }
 
-  crearProducto(payload: Omit<Producto, 'id'>): Observable<Producto> {
+  crearProducto(payload: NuevoProducto): Observable<Producto> {
     return this.http.post<Producto>(`${API_BASE}/productos/`, payload);
+  }
+
+  editarProductoCompleto(productoId: number, payload: NuevoProducto): Observable<Producto> {
+    return this.http.put<Producto>(`${API_BASE}/productos/${productoId}/`, payload);
   }
 
   actualizarProducto(productoId: number, payload: Partial<Producto>): Observable<Producto> {

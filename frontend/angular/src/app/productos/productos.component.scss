@@ -1,0 +1,115 @@
+.productos {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.productos__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group input {
+  border: 1px solid #d0d7de;
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+}
+
+.error {
+  color: #c53030;
+  font-size: 0.85rem;
+}
+
+.feedback {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.feedback--error {
+  background: #fde8e8;
+  color: #9b2c2c;
+}
+
+.feedback--success {
+  background: #e6fffa;
+  color: #047857;
+}
+
+.placeholder {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.acciones {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn {
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.btn--secondary {
+  background: #9ca3af;
+  color: #fff;
+}
+
+.btn--link {
+  background: transparent;
+  color: #2563eb;
+  padding: 0.25rem 0.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f3f4f6;
+}
+
+td,
+th {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
