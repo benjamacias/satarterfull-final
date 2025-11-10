@@ -129,6 +129,10 @@ export class ApiService {
     return this.http.get<Producto[]>(`${API_BASE}/productos/`);
   }
 
+  crearProducto(payload: Omit<Producto, 'id'>): Observable<Producto> {
+    return this.http.post<Producto>(`${API_BASE}/productos/`, payload);
+  }
+
   actualizarProducto(productoId: number, payload: Partial<Producto>): Observable<Producto> {
     return this.http.patch<Producto>(`${API_BASE}/productos/${productoId}/`, payload);
   }

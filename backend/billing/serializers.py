@@ -101,6 +101,36 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ["id", "name", "afip_code", "default_tariff"]
+        extra_kwargs = {
+            "name": {"allow_blank": False},
+            "afip_code": {"required": False, "allow_blank": True, "allow_null": True},
+            "default_tariff": {"required": False},
+        }
+
+    def validate_name(self, value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError(
+                "Ingresá el nombre del producto."
+            )
+        return value
+
+    def validate_afip_code(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            return None
+        return value
+
+    def validate_default_tariff(self, value):
+        if value is None:
+            return value
+        if value < 0:
+            raise serializers.ValidationError(
+                "La tarifa predeterminada no puede ser negativa."
+            )
+        return value
 
 
 class CPEInvoiceSerializer(serializers.ModelSerializer):
