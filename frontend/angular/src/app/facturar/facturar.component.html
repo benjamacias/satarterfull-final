@@ -3,6 +3,12 @@
   <p class="helper-text">
     Completá los datos del cliente y los del envío para generar el comprobante con un solo clic.
   </p>
+  <div class="card-inline" *ngIf="errors.length">
+    <h4>Errores al emitir el comprobante</h4>
+    <ul>
+      <li *ngFor="let error of errors">{{ error }}</li>
+    </ul>
+  </div>
   <div class="grid two-columns">
     <div>
       <h3>Datos del cliente</h3>
@@ -76,13 +82,143 @@
           <input id="ptoVta" type="number" min="0" [(ngModel)]="model.pto_vta" name="pto_vta" />
         </div>
         <div>
-          <label for="cbteTipo">Tipo de comprobante</label>
-          <select id="cbteTipo" [(ngModel)]="model.cbte_tipo" name="cbte_tipo">
-            <option [value]="11">Factura C</option>
-            <option [value]="6">Factura B</option>
-            <option [value]="1">Factura A</option>
+          <label for="tipoComprobante">Tipo de comprobante</label>
+          <select
+            id="tipoComprobante"
+            [ngModel]="tipoSeleccionado"
+            (ngModelChange)="seleccionarTipo($event)"
+            name="tipoSeleccionado"
+          >
+            <option *ngFor="let tipo of tiposComprobante" [value]="tipo.value">{{ tipo.label }}</option>
           </select>
         </div>
+      </div>
+      <div class="grid two-columns">
+        <div>
+          <label for="letraComprobante">Letra</label>
+          <select
+            id="letraComprobante"
+            [ngModel]="letraSeleccionada"
+            (ngModelChange)="seleccionarLetra($event)"
+            name="letraSeleccionada"
+          >
+            <option *ngFor="let letra of letrasDisponibles" [value]="letra">{{ letra }}</option>
+          </select>
+        </div>
+        <div *ngIf="tipoSeleccionado !== 'FACTURA'">
+          <label>Asociación requerida</label>
+          <div class="grid no-gap">
+            <label>
+              <input
+                type="radio"
+                name="modoAsociacion"
+                value="cbte"
+                [checked]="modoAsociacion === 'cbte'"
+                (change)="seleccionarModoAsociacion('cbte')"
+              />
+              Comprobante emitido
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="modoAsociacion"
+                value="periodo"
+                [checked]="modoAsociacion === 'periodo'"
+                (change)="seleccionarModoAsociacion('periodo')"
+              />
+              Período asociado
+            </label>
+          </div>
+        </div>
+      </div>
+      <div
+        class="card-inline"
+        *ngIf="tipoSeleccionado !== 'FACTURA' && modoAsociacion === 'cbte'"
+      >
+        <h4>Comprobante asociado</h4>
+        <div class="grid two-columns">
+          <div>
+            <label for="cbteAsocTipo">Tipo de comprobante</label>
+            <input
+              id="cbteAsocTipo"
+              type="number"
+              min="1"
+              [(ngModel)]="comprobanteAsociado.tipo"
+              name="cbteAsocTipo"
+            />
+          </div>
+          <div>
+            <label for="cbteAsocPto">Punto de venta</label>
+            <input
+              id="cbteAsocPto"
+              type="number"
+              min="0"
+              [(ngModel)]="comprobanteAsociado.pto_vta"
+              name="cbteAsocPto"
+            />
+          </div>
+          <div>
+            <label for="cbteAsocNro">Número de comprobante</label>
+            <input
+              id="cbteAsocNro"
+              type="number"
+              min="0"
+              [(ngModel)]="comprobanteAsociado.nro"
+              name="cbteAsocNro"
+            />
+          </div>
+          <div>
+            <label for="cbteAsocCuit">CUIT/CUIL del emisor</label>
+            <input
+              id="cbteAsocCuit"
+              type="text"
+              [(ngModel)]="comprobanteAsociado.cuit"
+              name="cbteAsocCuit"
+              placeholder="Opcional"
+            />
+          </div>
+          <div>
+            <label for="cbteAsocFch">Fecha del comprobante</label>
+            <input
+              id="cbteAsocFch"
+              type="date"
+              [(ngModel)]="comprobanteAsociado.cbte_fch"
+              name="cbteAsocFch"
+            />
+          </div>
+        </div>
+        <p class="helper-text">
+          Ingresá los datos del comprobante original para asociarlo a la nota.
+        </p>
+      </div>
+      <div
+        class="card-inline"
+        *ngIf="tipoSeleccionado !== 'FACTURA' && modoAsociacion === 'periodo'"
+      >
+        <h4>Período asociado</h4>
+        <div class="grid two-columns">
+          <div>
+            <label for="periodoDesde">Desde</label>
+            <input
+              id="periodoDesde"
+              type="date"
+              [(ngModel)]="periodoAsociado.desde"
+              name="periodoDesde"
+            />
+          </div>
+          <div>
+            <label for="periodoHasta">Hasta</label>
+            <input
+              id="periodoHasta"
+              type="date"
+              [(ngModel)]="periodoAsociado.hasta"
+              name="periodoHasta"
+            />
+          </div>
+        </div>
+        <p class="helper-text">
+          Especificá el rango de fechas que la nota cubre para el período asociado.
+        </p>
       </div>
       <div class="grid">
         <label>Resumen</label>
@@ -90,7 +226,10 @@
           <span class="status-dot success"></span>
           <div>
             <div><strong>Monto:</strong> {{ model.amount | currency:'ARS':'symbol':'1.2-2' }}</div>
-            <div><strong>Pto. Vta:</strong> {{ model.pto_vta }} — <strong>Tipo:</strong> {{ model.cbte_tipo }}</div>
+            <div>
+              <strong>Pto. Vta:</strong> {{ model.pto_vta }} —
+              <strong>Tipo:</strong> {{ descripcionComprobante }} ({{ model.cbte_tipo }})
+            </div>
           </div>
         </div>
       </div>
