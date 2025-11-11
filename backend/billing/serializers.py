@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from rest_framework import serializers
+
 from billing.models import Client, Invoice, Product, Provider
 from trips.models import CPEAutomotor
 
@@ -10,6 +13,107 @@ class CPESerializer(serializers.ModelSerializer):
         model = CPEAutomotor
         fields = "__all__"
 
+def _parse_afip_date(value: str, field_name: str) -> str:
+    """Parse date strings accepted by AFIP (YYYYMMDD or YYYY-MM-DD)."""
+    if not isinstance(value, str):
+        raise serializers.ValidationError({field_name: "Debe ser una cadena de texto."})
+
+    value = value.strip()
+    if not value:
+        raise serializers.ValidationError({field_name: "No puede estar vacío."})
+
+    for fmt in ("%Y%m%d", "%Y-%m-%d"):
+        try:
+            parsed = datetime.strptime(value, fmt)
+            return parsed.strftime("%Y%m%d")
+        except ValueError:
+            continue
+
+    raise serializers.ValidationError({field_name: "Formato de fecha inválido. Usá YYYYMMDD o YYYY-MM-DD."})
+
+
+class CbtesAsocField(serializers.Field):
+    default_error_messages = {
+        "invalid": "cbtes_asoc debe ser un objeto o una lista de objetos.",
+        "missing_required": "Cada comprobante asociado debe incluir 'tipo', 'pto_vta' y 'nro'.",
+    }
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            items = [data]
+        elif isinstance(data, list):
+            items = data
+        else:
+            self.fail("invalid")
+
+        normalized = []
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise serializers.ValidationError({
+                    "cbtes_asoc": f"El elemento en la posición {idx} debe ser un objeto."
+                })
+
+            try:
+                tipo = int(item["tipo"])
+                pto_vta = int(item["pto_vta"])
+                nro = int(item["nro"])
+            except KeyError:
+                self.fail("missing_required")
+            except (TypeError, ValueError):
+                raise serializers.ValidationError({
+                    "cbtes_asoc": "'tipo', 'pto_vta' y 'nro' deben ser numéricos."
+                })
+
+            if tipo <= 0 or pto_vta < 0 or nro < 0:
+                raise serializers.ValidationError({
+                    "cbtes_asoc": "'tipo', 'pto_vta' y 'nro' deben ser mayores o iguales a cero (tipo > 0)."
+                })
+
+            cuit = item.get("cuit")
+            cuit_digits = "".join(ch for ch in str(cuit or "") if ch.isdigit())
+            cbte_fch = item.get("cbte_fch")
+            if cbte_fch is not None:
+                cbte_fch = _parse_afip_date(str(cbte_fch), "cbtes_asoc.cbte_fch")
+
+            normalized.append(
+                {
+                    "tipo": tipo,
+                    "pto_vta": pto_vta,
+                    "nro": nro,
+                    **({"cuit": cuit_digits} if cuit_digits else {}),
+                    **({"cbte_fch": cbte_fch} if cbte_fch else {}),
+                }
+            )
+
+        return normalized
+
+    def to_representation(self, value):
+        return value
+
+
+class PeriodoAsocField(serializers.Field):
+    default_error_messages = {
+        "invalid": "periodo_asoc debe ser un objeto con 'desde' y 'hasta'.",
+    }
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            self.fail("invalid")
+
+        if "desde" not in data or "hasta" not in data:
+            raise serializers.ValidationError({
+                "periodo_asoc": "Debés enviar 'desde' y 'hasta'."
+            })
+
+        desde = _parse_afip_date(str(data["desde"]), "periodo_asoc.desde")
+        hasta = _parse_afip_date(str(data["hasta"]), "periodo_asoc.hasta")
+
+        return {"desde": desde, "hasta": hasta}
+
+    def to_representation(self, value):
+        return value
+
+
 class EmitirFacturaSerializer(serializers.Serializer):
     client_id = serializers.IntegerField()
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -18,14 +122,47 @@ class EmitirFacturaSerializer(serializers.Serializer):
     doc_tipo = serializers.IntegerField(default=80)  # 80 CUIT
     doc_nro = serializers.CharField()
     condicion_iva_receptor_id = serializers.IntegerField(required=False, allow_null=True)
+    cbtes_asoc = CbtesAsocField(required=False)
+    periodo_asoc = PeriodoAsocField(required=False)
+
+    def validate(self, attrs):
+        cbtes_asoc = attrs.get("cbtes_asoc")
+        periodo_asoc = attrs.get("periodo_asoc")
+        cbte_tipo = attrs.get("cbte_tipo")
+
+        if cbtes_asoc and periodo_asoc:
+            raise serializers.ValidationError(
+                "No podés enviar cbtes_asoc y periodo_asoc al mismo tiempo."
+            )
+
+        if cbte_tipo in (12, 13) and not (cbtes_asoc or periodo_asoc):
+            raise serializers.ValidationError(
+                "Las Notas de Débito/Crédito requieren cbtes_asoc o periodo_asoc."
+            )
+
+        return attrs
 
 class InvoiceSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source="client.name", read_only=True)
     client_email = serializers.EmailField(source="client.email", read_only=True)
+    metadata = serializers.JSONField(read_only=True)
     class Meta:
         model = Invoice
-        fields = ["id","client","client_name","client_email","amount","pto_vta","cbte_tipo",
-                  "cbte_nro","cae","cae_due","pdf","created_at"]
+        fields = [
+            "id",
+            "client",
+            "client_name",
+            "client_email",
+            "amount",
+            "pto_vta",
+            "cbte_tipo",
+            "cbte_nro",
+            "cae",
+            "cae_due",
+            "pdf",
+            "created_at",
+            "metadata",
+        ]
 
 
 class ClientSerializer(serializers.ModelSerializer):
