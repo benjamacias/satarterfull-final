@@ -22,6 +22,19 @@ export interface Provider {
   fiscal_address: string;
 }
 
+export interface ComprobanteAsociado {
+  tipo: number;
+  pto_vta: number;
+  nro: number;
+  cuit?: string;
+  cbte_fch?: string;
+}
+
+export interface PeriodoAsociado {
+  desde: string;
+  hasta: string;
+}
+
 export interface EnvioFactura {
   client_id: number | null;
   amount: number;
@@ -30,6 +43,8 @@ export interface EnvioFactura {
   doc_tipo: number;
   doc_nro: string;
   condicion_iva_receptor_id?: number | null;
+  cbtes_asoc?: ComprobanteAsociado | ComprobanteAsociado[] | null;
+  periodo_asoc?: PeriodoAsociado | null;
 }
 
 export interface NuevoCliente {
