@@ -451,12 +451,16 @@ def _extract_messages(tree: ET.Element, tag: str) -> List[str]:
     return messages
 
 
+# Códigos de comprobantes que representan notas de crédito y débito
+NOTE_CBTE_TIPOS = {2, 3, 7, 8, 12, 13}
+
+
 def solicitar_cae(
     cuit: str,
     pto_vta: int,
     importe: Union[str, float, Decimal],
     *,
-    cbte_tipo: int = 11,                 # 11 = Factura C, 12 = ND C, 13 = NC C
+    cbte_tipo: int = 11,                 # 11 = Factura C, 2/3 = Nota Débito/Crédito A, 7/8 = Nota Débito/Crédito B, 12/13 = Nota Débito/Crédito C
     concepto: int = 2,
     doc_tipo: int = 80,
     doc_nro: Optional[Union[str, int]] = None,
@@ -516,7 +520,7 @@ def solicitar_cae(
         raise ValueError("El número de documento del receptor es obligatorio para solicitar el CAE")
 
     # Notas de Débito/Crédito requieren comprobante o período asociado
-    if cbte_tipo in (12, 13) and not (cbtes_asoc or periodo_asoc):
+    if cbte_tipo in NOTE_CBTE_TIPOS and not (cbtes_asoc or periodo_asoc):
         raise ValueError("Para Notas de Débito/Crédito debés enviar cbtes_asoc o periodo_asoc")
 
     if cbtes_asoc and periodo_asoc:
