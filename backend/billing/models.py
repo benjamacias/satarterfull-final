@@ -49,6 +49,7 @@ class Invoice(models.Model):
     cae_due = models.CharField(max_length=8, blank=True, null=True)  # YYYYMMDD
     xml_raw = models.TextField(blank=True, null=True)
     pdf = models.FileField(upload_to="invoices/", blank=True, null=True)
+    metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

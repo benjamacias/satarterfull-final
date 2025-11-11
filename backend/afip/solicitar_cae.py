@@ -346,6 +346,70 @@ def consultar_ultimo_comprobante(session, token, sign, cuit, pto_vta, cbte_tipo)
     return int(ultimo.text) if ultimo is not None else 0
 
 
+def _read_wsaa_credentials() -> tuple[str, str]:
+    with open("secrets/token.txt") as f:
+        token = f.read().strip()
+    with open("secrets/sign.txt") as f:
+        sign = f.read().strip()
+    return token, sign
+
+
+def consultar_tipos_comprobante(session, token, sign, cuit, pto_vta) -> List[int]:
+    url = "https://servicios1.afip.gov.ar/wsfev1/service.asmx"
+    headers = {
+        "Content-Type": "text/xml; charset=utf-8",
+        "SOAPAction": "http://ar.gov.afip.dif.FEV1/FEParamGetTiposCbte",
+    }
+
+    soap_body = f"""<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:ar="http://ar.gov.afip.dif.FEV1/">
+  <soap:Header/>
+  <soap:Body>
+    <ar:FEParamGetTiposCbte>
+      <ar:Auth>
+        <ar:Token>{token}</ar:Token>
+        <ar:Sign>{sign}</ar:Sign>
+        <ar:Cuit>{cuit}</ar:Cuit>
+      </ar:Auth>
+    </ar:FEParamGetTiposCbte>
+  </soap:Body>
+</soap:Envelope>"""
+
+    response = session.post(url, data=soap_body.encode("utf-8"), headers=headers, timeout=60)
+    response.raise_for_status()
+    tree = ET.fromstring(response.text)
+
+    namespace = "{http://ar.gov.afip.dif.FEV1/}"
+    tipos = []
+    for node in tree.findall(f".//{namespace}CbteTipo"):
+        tipo_id = node.findtext(f"{namespace}Id")
+        try:
+            if tipo_id is not None:
+                tipos.append(int(tipo_id))
+        except ValueError:
+            continue
+
+    if not tipos:
+        errors = _extract_messages(tree, "Err")
+        if errors:
+            raise RuntimeError(
+                "AFIP devolvió errores al consultar tipos de comprobante: " + "; ".join(errors)
+            )
+        raise RuntimeError(
+            f"AFIP no devolvió tipos de comprobante habilitados para el CUIT {cuit} y punto de venta {pto_vta}"
+        )
+
+    return tipos
+
+
+def obtener_tipos_comprobante_validos(*, cuit: str, pto_vta: int) -> List[int]:
+    token, sign = _read_wsaa_credentials()
+    session = requests.Session()
+    session.mount("https://", SSLAdapter())
+    return consultar_tipos_comprobante(session, token, sign, cuit, pto_vta)
+
+
 # ======================
 # Solicitar CAE
 # ======================
@@ -409,10 +473,7 @@ def solicitar_cae(
     periodo_asoc: Optional[dict] = None,                    # {"desde": "YYYYMMDD|YYYY-MM-DD", "hasta": "..."}
 ):
     # Lee token/sign del WSAA previamente generados
-    with open("secrets/token.txt") as f:
-         token = f.read().strip()
-    with open("secrets/sign.txt") as f:
-         sign = f.read().strip()
+    token, sign = _read_wsaa_credentials()
     url = "https://servicios1.afip.gov.ar/wsfev1/service.asmx"
     headers = {
         "Content-Type": "text/xml; charset=utf-8",

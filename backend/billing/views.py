@@ -3,6 +3,7 @@ import json
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.shortcuts import get_object_or_404
 from billing.models import Client, Invoice, Product, Provider
@@ -50,15 +51,20 @@ class FacturacionViewSet(viewsets.ViewSet):
         s = EmitirFacturaSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         client = Client.objects.get(pk=s.validated_data["client_id"])
-        inv = emitir_y_guardar_factura(
-            client=client,
-            amount=s.validated_data["amount"],
-            pto_vta=s.validated_data["pto_vta"],
-            cbte_tipo=s.validated_data["cbte_tipo"],
-            doc_tipo=s.validated_data["doc_tipo"],
-            doc_nro=s.validated_data["doc_nro"],
-            condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
-        )
+        try:
+            inv = emitir_y_guardar_factura(
+                client=client,
+                amount=s.validated_data["amount"],
+                pto_vta=s.validated_data["pto_vta"],
+                cbte_tipo=s.validated_data["cbte_tipo"],
+                doc_tipo=s.validated_data["doc_tipo"],
+                doc_nro=s.validated_data["doc_nro"],
+                condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
+                cbtes_asoc=s.validated_data.get("cbtes_asoc"),
+                periodo_asoc=s.validated_data.get("periodo_asoc"),
+            )
+        except ValueError as exc:
+            raise ValidationError({"cbte_tipo": [str(exc)]})
         return Response(InvoiceSerializer(inv).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"], url_path="facturas")
