@@ -45,6 +45,11 @@ export interface EnvioFactura {
   condicion_iva_receptor_id?: number | null;
   cbtes_asoc?: ComprobanteAsociado | ComprobanteAsociado[] | null;
   periodo_asoc?: PeriodoAsociado | null;
+  concepto?: number | null;
+  issue_date?: string | null;
+  service_start?: string | null;
+  service_end?: string | null;
+  payment_due?: string | null;
 }
 
 export interface NuevoCliente {

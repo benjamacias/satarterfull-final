@@ -162,26 +162,56 @@ export class FacturarComponent implements OnInit {
       if (this.modoAsociacion === 'cbte') {
         const { tipo, pto_vta, nro, cuit, cbte_fch } = this.comprobanteAsociado;
         if (tipo != null && pto_vta != null && nro != null) {
+          const fechaNormalizada = this.normalizarFecha(cbte_fch);
           payload.cbtes_asoc = {
             tipo: Number(tipo),
             pto_vta: Number(pto_vta),
             nro: Number(nro),
             ...(cuit ? { cuit: String(cuit) } : {}),
-            ...(cbte_fch ? { cbte_fch: String(cbte_fch) } : {})
+            ...(fechaNormalizada ? { cbte_fch: fechaNormalizada } : {})
           };
         }
       } else if (this.modoAsociacion === 'periodo') {
         const { desde, hasta } = this.periodoAsociado;
         if (desde && hasta) {
+          const desdeNormalizado = this.normalizarFecha(desde);
+          const hastaNormalizado = this.normalizarFecha(hasta);
           payload.periodo_asoc = {
-            desde: String(desde),
-            hasta: String(hasta)
+            desde: desdeNormalizado ?? String(desde),
+            hasta: hastaNormalizado ?? String(hasta)
           };
         }
       }
     }
 
     return payload;
+  }
+
+  private normalizarFecha(value: unknown): string | undefined {
+    if (!value) {
+      return undefined;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return undefined;
+      }
+      if (/^\d{8}$/.test(trimmed)) {
+        return trimmed;
+      }
+      const compact = trimmed.replace(/-/g, '');
+      if (/^\d{8}$/.test(compact)) {
+        return compact;
+      }
+      return undefined;
+    }
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      const year = value.getFullYear();
+      const month = `${value.getMonth() + 1}`.padStart(2, '0');
+      const day = `${value.getDate()}`.padStart(2, '0');
+      return `${year}${month}${day}`;
+    }
+    return undefined;
   }
 
   private validarDatos(): boolean {
