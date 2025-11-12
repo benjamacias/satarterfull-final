@@ -75,6 +75,52 @@ class FacturacionAPITestCase(APITestCase):
             "20240115",
         )
 
+    @patch("afip.fe_service.fe.obtener_tipos_comprobante_validos", return_value=[11, 12, 13])
+    @patch("afip.fe_service._render_pdf_to_bytes", return_value=b"PDF")
+    @patch("afip.fe_service.fe.solicitar_cae")
+    def test_emitir_nota_credito_con_periodo_asoc(self, mock_solicitar_cae, _mock_pdf, mock_tipos):
+        mock_solicitar_cae.return_value = {
+            "cae": "98765432109876",
+            "cae_due": "20251231",
+            "cbte_nro": 7,
+            "xml": "<xml></xml>",
+        }
+
+        payload = {
+            "client_id": self.client_obj.id,
+            "amount": "150.00",
+            "pto_vta": 4,
+            "cbte_tipo": 12,
+            "doc_tipo": 80,
+            "doc_nro": "20-12345678-9",
+            "periodo_asoc": {
+                "desde": "2023-05-01",
+                "hasta": "2023-05-31",
+            },
+        }
+
+        response = self.client.post("/api/facturas/emitir/", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        mock_solicitar_cae.assert_called_once()
+        mock_tipos.assert_called_once_with(cuit="TU_CUIT_EMISOR", pto_vta=4)
+
+        call_kwargs = mock_solicitar_cae.call_args.kwargs
+        self.assertNotIn("cbtes_asoc", call_kwargs)
+        self.assertEqual(
+            call_kwargs["periodo_asoc"],
+            {"desde": "20230501", "hasta": "20230531"},
+        )
+
+        invoice = Invoice.objects.get(cbte_nro=7)
+        self.assertEqual(invoice.cbte_tipo, 12)
+        self.assertEqual(invoice.metadata.get("periodo_asoc"), {"desde": "20230501", "hasta": "20230531"})
+        self.assertIn("metadata", response.data)
+        self.assertEqual(
+            response.data["metadata"]["periodo_asoc"],
+            {"desde": "20230501", "hasta": "20230531"},
+        )
+
     @patch("afip.fe_service.fe.obtener_tipos_comprobante_validos", return_value=[12])
     @patch("afip.fe_service.fe.solicitar_cae")
     def test_emitir_factura_tipo_no_habilitado(self, mock_solicitar_cae, mock_tipos):
