@@ -4,7 +4,7 @@ import sys
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List, Optional, Union
+from typing import Final, List, Optional, Union
 from zeep import Client
 import requests
 from requests.adapters import HTTPAdapter
@@ -452,7 +452,7 @@ def _extract_messages(tree: ET.Element, tag: str) -> List[str]:
 
 
 # Códigos de comprobantes que representan notas de crédito y débito
-NOTE_CBTE_TIPOS = {2, 3, 7, 8, 12, 13}
+NOTE_CBTE_TIPOS: Final = frozenset({2, 3, 7, 8, 12, 13})
 
 
 def solicitar_cae(
@@ -460,7 +460,8 @@ def solicitar_cae(
     pto_vta: int,
     importe: Union[str, float, Decimal],
     *,
-    cbte_tipo: int = 11,                 # 11 = Factura C, 2/3 = Nota Débito/Crédito A, 7/8 = Nota Débito/Crédito B, 12/13 = Nota Débito/Crédito C
+    # cbte_tipo soporta: 11 = Factura C; 2/3 = Nota Débito/Crédito A; 7/8 = Nota Débito/Crédito B; 12/13 = Nota Débito/Crédito C
+    cbte_tipo: int = 11,
     concepto: int = 2,
     doc_tipo: int = 80,
     doc_nro: Optional[Union[str, int]] = None,
