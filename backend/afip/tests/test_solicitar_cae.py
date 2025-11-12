@@ -1,16 +1,14 @@
 from django.test import SimpleTestCase
 from unittest.mock import patch
 
-from afip.solicitar_cae import solicitar_cae
+from afip.solicitar_cae import NOTE_CBTE_TIPOS, solicitar_cae
 
 
 class SolicitarCaeNotasTest(SimpleTestCase):
     @patch("afip.solicitar_cae.consultar_ultimo_comprobante", return_value=1)
     @patch("afip.solicitar_cae._read_wsaa_credentials", return_value=("token", "sign"))
     def test_notas_requieren_comprobantes_o_periodo_asociado(self, _mock_wsaa, _mock_ultimo):
-        nota_tipos = [2, 3, 7, 8, 12, 13]
-
-        for tipo in nota_tipos:
+        for tipo in NOTE_CBTE_TIPOS:
             with self.subTest(cbte_tipo=tipo):
                 with self.assertRaisesMessage(
                     ValueError,
