@@ -31,7 +31,15 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
-          "options": { "buildTarget": "afip-portal:build" }
+          "options": {
+            "browserTarget": "afip-portal:build",
+            "host": "0.0.0.0",
+            "port": 4200,
+            "allowedHosts": [
+              "c50bee2b11db.ngrok-free.app"
+            ],
+            "proxyConfig": "proxy.conf.json"
+          }
         }
       }
     }
