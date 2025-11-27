@@ -23,7 +23,7 @@ from billing.serializers import (
     ProductSerializer,
     ProviderSerializer,
 )
-# from afip.cpe_service import consultar_cpe_por_ctg
+from afip.cpe_service import consultar_cpe_por_ctg
 # from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
 
@@ -39,25 +39,13 @@ class FacturacionViewSet(viewsets.ViewSet):
     def consultar_cpe(self, request):
         s = CPERequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        # llamada original a AFIP deshabilitada para modo de prueba:
-        # try:
-        #     cpe = consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
-        # except Exception as exc:  # pragma: no cover - defensivo, depende de AFIP
-        #     return Response(
-        #         {"detail": f"No fue posible consultar la carta de porte: {exc}"},
-        #         status=status.HTTP_502_BAD_GATEWAY,
-        #     )
-
-        cpe = CPEAutomotor(
-            nro_ctg=s.validated_data["nro_ctg"],
-            tipo_carta_porte="TEST",
-            estado="Emitida (modo prueba)",
-            sucursal=1,
-            nro_orden=1,
-            fecha_emision=timezone.now(),
-            fecha_vencimiento=timezone.now() + timedelta(days=7),
-            raw_response={"detail": "Respuesta simulada sin conexión a AFIP"},
-        )
+        try:
+            cpe = consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
+        except Exception as exc:  # pragma: no cover - defensivo, depende de AFIP
+            return Response(
+                {"detail": f"No fue posible consultar la carta de porte: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         return Response(CPESerializer(cpe).data)
 
