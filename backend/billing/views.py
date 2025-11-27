@@ -1,25 +1,30 @@
 import json
+from datetime import timedelta
 
+from django.core.mail import EmailMessage
+from django.db.models import Max
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from django.core.mail import EmailMessage
-from django.shortcuts import get_object_or_404
+# from rest_framework.exceptions import ValidationError
+
 from billing.models import Client, Invoice, Product, Provider
 from billing.serializers import (
+    CPEInvoiceSerializer,
     CPEListSerializer,
     CPERequestSerializer,
-    CPESerializer,
-    CPEInvoiceSerializer,
     CPETariffUpdateSerializer,
+    CPESerializer,
     ClientSerializer,
     EmitirFacturaSerializer,
     InvoiceSerializer,
     ProductSerializer,
     ProviderSerializer,
 )
-from afip.cpe_service import consultar_cpe_por_ctg
+# from afip.cpe_service import consultar_cpe_por_ctg
+# from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
 
 
@@ -34,37 +39,81 @@ class FacturacionViewSet(viewsets.ViewSet):
     def consultar_cpe(self, request):
         s = CPERequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        try:
-            cpe = consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
-        except Exception as exc:  # pragma: no cover - defensive, depends on AFIP API
-            return Response(
-                {"detail": f"No fue posible consultar la carta de porte: {exc}"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        # llamada original a AFIP deshabilitada para modo de prueba:
+        # try:
+        #     cpe = consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
+        # except Exception as exc:  # pragma: no cover - defensivo, depende de AFIP
+        #     return Response(
+        #         {"detail": f"No fue posible consultar la carta de porte: {exc}"},
+        #         status=status.HTTP_502_BAD_GATEWAY,
+        #     )
+
+        cpe = CPEAutomotor(
+            nro_ctg=s.validated_data["nro_ctg"],
+            tipo_carta_porte="TEST",
+            estado="Emitida (modo prueba)",
+            sucursal=1,
+            nro_orden=1,
+            fecha_emision=timezone.now(),
+            fecha_vencimiento=timezone.now() + timedelta(days=7),
+            raw_response={"detail": "Respuesta simulada sin conexión a AFIP"},
+        )
 
         return Response(CPESerializer(cpe).data)
 
     @action(detail=False, methods=["post"], url_path="facturas/emitir")
     def emitir(self, request):
-        from afip.fe_service import emitir_y_guardar_factura
-
         s = EmitirFacturaSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         client = Client.objects.get(pk=s.validated_data["client_id"])
-        try:
-            inv = emitir_y_guardar_factura(
-                client=client,
-                amount=s.validated_data["amount"],
+
+        # emisión real hacia AFIP deshabilitada para modo de prueba:
+        # try:
+        #     inv = emitir_y_guardar_factura(
+        #         client=client,
+        #         amount=s.validated_data["amount"],
+        #         pto_vta=s.validated_data["pto_vta"],
+        #         cbte_tipo=s.validated_data["cbte_tipo"],
+        #         doc_tipo=s.validated_data["doc_tipo"],
+        #         doc_nro=s.validated_data["doc_nro"],
+        #         condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
+        #         cbtes_asoc=s.validated_data.get("cbtes_asoc"),
+        #         periodo_asoc=s.validated_data.get("periodo_asoc"),
+        #     )
+        # except ValueError as exc:
+        #     raise ValidationError({"cbte_tipo": [str(exc)]})
+
+        next_number = (
+            Invoice.objects.filter(
                 pto_vta=s.validated_data["pto_vta"],
                 cbte_tipo=s.validated_data["cbte_tipo"],
-                doc_tipo=s.validated_data["doc_tipo"],
-                doc_nro=s.validated_data["doc_nro"],
-                condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
-                cbtes_asoc=s.validated_data.get("cbtes_asoc"),
-                periodo_asoc=s.validated_data.get("periodo_asoc"),
             )
-        except ValueError as exc:
-            raise ValidationError({"cbte_tipo": [str(exc)]})
+            .aggregate(Max("cbte_nro"))
+            .get("cbte_nro__max")
+            or 0
+        )
+
+        metadata = {
+            "modo": "pruebas",
+            "doc_tipo": s.validated_data["doc_tipo"],
+            "doc_nro": s.validated_data["doc_nro"],
+        }
+        if s.validated_data.get("cbtes_asoc"):
+            metadata["cbtes_asoc"] = s.validated_data["cbtes_asoc"]
+        if s.validated_data.get("periodo_asoc"):
+            metadata["periodo_asoc"] = s.validated_data["periodo_asoc"]
+
+        inv = Invoice.objects.create(
+            client=client,
+            amount=s.validated_data["amount"],
+            pto_vta=s.validated_data["pto_vta"],
+            cbte_tipo=s.validated_data["cbte_tipo"],
+            cbte_nro=next_number + 1,
+            cae=f"TEST-CAE-{next_number + 1:08d}",
+            cae_due=(timezone.now() + timedelta(days=30)).strftime("%Y%m%d"),
+            metadata=metadata,
+        )
+
         return Response(InvoiceSerializer(inv).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"], url_path="facturas")
