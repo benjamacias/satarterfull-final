@@ -11,6 +11,7 @@ export class CpeConsultaComponent {
   resultado: any = null;
   loading = false;
   lastQuery = '';
+  descargandoPdf = false;
 
   constructor(private api: ApiService) {}
 
@@ -28,6 +29,29 @@ export class CpeConsultaComponent {
       error: _ => {
         this.loading = false;
         alert('Error consultando CPE');
+      }
+    });
+  }
+
+  descargarPdf(): void {
+    if (!this.resultado?.id || this.descargandoPdf) {
+      return;
+    }
+
+    this.descargandoPdf = true;
+    this.api.descargarPdfCpe(this.resultado.id).subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `cpe-${this.resultado.nro_ctg || 'documento'}.pdf`;
+        enlace.click();
+        window.URL.revokeObjectURL(url);
+        this.descargandoPdf = false;
+      },
+      error: _ => {
+        this.descargandoPdf = false;
+        alert('No se pudo descargar el PDF de la carta de porte.');
       }
     });
   }

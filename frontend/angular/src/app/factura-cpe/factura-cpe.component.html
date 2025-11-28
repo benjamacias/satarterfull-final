@@ -44,7 +44,7 @@
           <th>Producto</th>
           <th>Procedencia</th>
           <th>Destino</th>
-          <th>Peso bruto</th>
+          <th>Peso neto</th>
           <th>Tarifa</th>
           <th>Total</th>
         </tr>
@@ -64,7 +64,7 @@
           <td>{{ cpe.product_name || cpe.product_description || '—' }}</td>
           <td>{{ cpe.procedencia || '—' }}</td>
           <td>{{ cpe.destino || '—' }}</td>
-          <td>{{ cpe.peso_bruto_descarga || '—' }}</td>
+          <td>{{ cpe.net_weight || cpe.peso_bruto_descarga || '—' }}</td>
           <td>
             <div class="grid no-gap two-columns">
               <input

@@ -1,17 +1,48 @@
 from datetime import datetime
+from decimal import Decimal
 
 from rest_framework import serializers
 
+from afip.cpe_service import _find_first, _to_decimal
 from billing.models import Client, Invoice, Product, Provider
 from trips.models import CPEAutomotor
 
 class CPERequestSerializer(serializers.Serializer):
     nro_ctg = serializers.CharField()
 
+def _calculate_net_weight(cpe: CPEAutomotor) -> Decimal | None:
+    raw = cpe.raw_response or {}
+    gross = _to_decimal(
+        _find_first(
+            raw,
+            {"pesoBrutoDescarga", "pesoBruto", "pesoBrutoTotal"},
+        )
+    )
+    tare = _to_decimal(_find_first(raw, {"pesoTaraDescarga", "pesoTara"}))
+
+    if gross is None:
+        gross = cpe.peso_bruto_descarga
+
+    if gross is None:
+        return None
+
+    if tare not in (None, Decimal("0")):
+        net = gross - tare
+        if net > 0:
+            return net
+
+    return gross
+
+
 class CPESerializer(serializers.ModelSerializer):
+    net_weight = serializers.SerializerMethodField()
+
     class Meta:
         model = CPEAutomotor
         fields = "__all__"
+
+    def get_net_weight(self, obj: CPEAutomotor):
+        return _calculate_net_weight(obj)
 
 def _parse_afip_date(value: str, field_name: str) -> str:
     """Parse date strings accepted by AFIP (YYYYMMDD or YYYY-MM-DD)."""
@@ -279,6 +310,7 @@ class CPEInvoiceSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
     product_code = serializers.SerializerMethodField()
     total_amount = serializers.SerializerMethodField()
+    net_weight = serializers.SerializerMethodField()
 
     class Meta:
         model = CPEAutomotor
@@ -291,6 +323,7 @@ class CPEInvoiceSerializer(serializers.ModelSerializer):
             "procedencia",
             "destino",
             "peso_bruto_descarga",
+            "net_weight",
             "tariff",
             "total_amount",
             "client_id",
@@ -305,9 +338,13 @@ class CPEInvoiceSerializer(serializers.ModelSerializer):
     def get_total_amount(self, obj: CPEAutomotor):
         if obj.tariff is None:
             return None
-        if obj.peso_bruto_descarga in (None, 0):
+        net_weight = self.get_net_weight(obj)
+        if net_weight in (None, 0):
             return obj.tariff
-        return obj.tariff * obj.peso_bruto_descarga
+        return obj.tariff * net_weight
+
+    def get_net_weight(self, obj: CPEAutomotor):
+        return _calculate_net_weight(obj)
 
     def get_client_id(self, obj: CPEAutomotor):
         return obj.client_id

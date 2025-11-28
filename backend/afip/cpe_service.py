@@ -149,18 +149,28 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
         raise RuntimeError("Respuesta inválida del WS CPE")
     data = _element_to_dict(resp)
     cab = data.get("cabecera", {}) or {}
-    client = _match_by_tax_id(
-        Client,
-        _find_first(
-            data,
-            {
-                "cuitDestinatario",
-                "cuitDestino",
-                "cuitDestinatarioFinal",
-                "cuitDestinatarioComercial",
-            },
-        ),
+    client_tax_id = _find_first(
+        data,
+        {
+            "cuitDestinatario",
+            "cuitDestino",
+            "cuitDestinatarioFinal",
+            "cuitDestinatarioComercial",
+            "cuitPagadorFlete",
+        },
     )
+
+    client = _match_by_tax_id(Client, client_tax_id)
+    if client is None:
+        normalized_client_tax_id = _normalize_tax_id(client_tax_id)
+        if normalized_client_tax_id:
+            client, _ = Client.objects.get_or_create(
+                tax_id=normalized_client_tax_id,
+                defaults={
+                    "name": f"Pagador {normalized_client_tax_id}",
+                    "email": f"pagador{normalized_client_tax_id}@auto.example.com",
+                },
+            )
     provider = _match_by_tax_id(
         Provider,
         _find_first(

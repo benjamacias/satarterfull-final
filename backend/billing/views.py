@@ -1,8 +1,11 @@
+import base64
+import binascii
 import json
 from datetime import timedelta
 
 from django.core.mail import EmailMessage
 from django.db.models import Max
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -23,7 +26,7 @@ from billing.serializers import (
     ProductSerializer,
     ProviderSerializer,
 )
-from afip.cpe_service import consultar_cpe_por_ctg
+from afip.cpe_service import _find_first, consultar_cpe_por_ctg
 # from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
 
@@ -223,3 +226,25 @@ class FacturacionViewSet(viewsets.ViewSet):
                 product.default_tariff = cpe.tariff
                 product.save(update_fields=["default_tariff"])
         return Response(CPEInvoiceSerializer(cpe).data)
+
+    @action(detail=False, methods=["get"], url_path="cpe/(?P<cpe_id>[^/.]+)/pdf")
+    def descargar_pdf_cpe(self, request, cpe_id=None):
+        cpe = get_object_or_404(CPEAutomotor, pk=cpe_id)
+        pdf_base64 = _find_first(cpe.raw_response or {}, {"pdf"})
+        if not pdf_base64:
+            return Response(
+                {"detail": "El PDF no está disponible para esta carta de porte."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            pdf_content = base64.b64decode(pdf_base64)
+        except (binascii.Error, ValueError):
+            return Response(
+                {"detail": "No se pudo decodificar el PDF de la carta de porte."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        response = HttpResponse(pdf_content, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="cpe-{cpe.nro_ctg}.pdf"'
+        return response
