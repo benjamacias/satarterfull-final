@@ -18,6 +18,11 @@
 
 <section class="card" *ngIf="resultado && !loading">
   <h3>Resultado de la consulta</h3>
+  <div class="align-end" *ngIf="resultado?.id">
+    <button type="button" (click)="descargarPdf()" [disabled]="descargandoPdf">
+      {{ descargandoPdf ? 'Descargando…' : 'Descargar PDF' }}
+    </button>
+  </div>
   <div class="grid two-columns">
     <div>
       <label>Estado</label>

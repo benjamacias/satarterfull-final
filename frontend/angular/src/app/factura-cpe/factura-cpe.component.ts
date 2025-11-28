@@ -95,6 +95,7 @@ export class FacturaCpeComponent implements OnInit {
           return {
             ...detalle,
             peso_bruto_descarga: this.normalizarNumero(detalle.peso_bruto_descarga),
+            net_weight: this.normalizarNumero(detalle.net_weight),
             tariff: tarifa,
             total_amount: this.normalizarNumero(detalle.total_amount),
             selected: false,
@@ -122,10 +123,11 @@ export class FacturaCpeComponent implements OnInit {
       return cpe.total_amount;
     }
     const tarifa = cpe.tariff ?? 0;
-    if (!cpe.peso_bruto_descarga) {
+    const peso = cpe.net_weight ?? cpe.peso_bruto_descarga;
+    if (!peso) {
       return tarifa;
     }
-    return tarifa * cpe.peso_bruto_descarga;
+    return tarifa * peso;
   }
 
   private actualizarTotales(): void {

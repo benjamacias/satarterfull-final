@@ -100,6 +100,7 @@ export interface CpeFacturaDetalle {
   procedencia: string;
   destino: string;
   peso_bruto_descarga: number | null;
+  net_weight: number | null;
   tariff: number | null;
   total_amount: number | null;
   client_id: number | null;
@@ -173,5 +174,9 @@ export class ApiService {
 
   actualizarTarifaCpe(cpeId: number, tarifa: number): Observable<CpeFacturaDetalle> {
     return this.http.patch<CpeFacturaDetalle>(`${API_BASE}/cpe/${cpeId}/tarifa/`, { tariff: tarifa });
+  }
+
+  descargarPdfCpe(cpeId: number): Observable<Blob> {
+    return this.http.get(`${API_BASE}/cpe/${cpeId}/pdf/`, { responseType: 'blob' });
   }
 }
