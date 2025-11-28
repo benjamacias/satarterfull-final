@@ -18,7 +18,7 @@ def _calculate_net_weight(cpe: CPEAutomotor) -> Decimal | None:
             {"pesoBrutoDescarga", "pesoBruto", "pesoBrutoTotal"},
         )
     )
-    tare = _to_decimal(_find_first(raw, {"pesoTaraDescarga", "pesoTara"}))
+    tare = _to_decimal(_find_first(raw, {"pesoTaraDescarga"}))
 
     if gross is None:
         gross = cpe.peso_bruto_descarga
