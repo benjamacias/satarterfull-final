@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+import logging
 import xml.etree.ElementTree as ET
 
 import requests
@@ -8,6 +9,8 @@ from django.utils import timezone
 from trips.models import CPEAutomotor, Vehicle
 from billing.models import Client, Product, Provider
 from .wsaa import get_token_sign
+
+logger = logging.getLogger(__name__)
 
 URL_PROD = "https://cpea-ws.afip.gob.ar/wscpe/services/soap"
 CUIT_REP = "30716004720"  # ajustar
@@ -127,7 +130,65 @@ def _normalize_domain(value: str | None) -> str | None:
     return cleaned or None
 
 
-def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
+class CPEConsultationError(Exception):
+    def __init__(self, message: str, code: str | None = None, is_transient: bool = False):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.is_transient = is_transient
+
+
+def _sanitize_payload(value: str, secrets: list[str]) -> str:
+    sanitized = value or ""
+    for secret in secrets:
+        if secret:
+            sanitized = sanitized.replace(secret, "***")
+    return sanitized
+
+
+def _extract_error_info(payload: dict) -> tuple[str | None, str | None]:
+    if not isinstance(payload, dict):
+        return None, None
+
+    potential_containers = [payload]
+    for key, value in payload.items():
+        if not value:
+            continue
+        lower_key = key.lower()
+        if "error" in lower_key or "fault" in lower_key:
+            potential_containers.append(value)
+        elif isinstance(value, (dict, list)):
+            potential_containers.append(value)
+
+    for container in potential_containers:
+        code = _find_first(container, {"codigo", "code", "faultcode"})
+        message = _find_first(
+            container,
+            {
+                "mensaje",
+                "descripcion",
+                "faultstring",
+                "detalle",
+                "detail",
+            },
+        )
+        if message:
+            return (str(code).strip() if code else None, str(message).strip())
+    return None, None
+
+
+def _normalize_error_code(code: str | None, message: str | None) -> str | None:
+    normalized_msg = (message or "").lower()
+    if "token" in normalized_msg and "expir" in normalized_msg:
+        return "TOKEN_EXPIRED"
+    if "ctg" in normalized_msg and any(w in normalized_msg for w in ["no existe", "inexist", "inválid", "invalid"]):
+        return "INVALID_CTG"
+    if code:
+        return str(code)
+    return None
+
+
+def consultar_cpe_por_ctg(nro_ctg: str, peso_bruto_descarga: Decimal | None = None) -> CPEAutomotor:
     token, sign = get_token_sign(service="wscpe")
     body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -146,15 +207,74 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
     </wsc:ConsultarCPEAutomotorReq>
   </soapenv:Body>
 </soapenv:Envelope>"""
-    headers = {"Content-Type":"text/xml; charset=utf-8",
-               "SOAPAction":"https://serviciosjava.afip.gob.ar/wscpe/consultarCPEAutomotor"}
-    r = requests.post(URL_PROD, data=body.encode("utf-8"), headers=headers, timeout=60)
-    r.raise_for_status()
+    sanitized_request = _sanitize_payload(body, [token, sign])
+    headers = {
+        "Content-Type": "text/xml; charset=utf-8",
+        "SOAPAction": "https://serviciosjava.afip.gob.ar/wscpe/consultarCPEAutomotor",
+    }
+
+    logger.info(
+        "Consultando CPE en AFIP",
+        extra={
+            "event": "afip.cpe.consulta.request",
+            "nro_ctg": str(nro_ctg),
+            "payload": sanitized_request,
+        },
+    )
+
+    try:
+        r = requests.post(URL_PROD, data=body.encode("utf-8"), headers=headers, timeout=60)
+        r.raise_for_status()
+    except requests.RequestException as exc:  # pragma: no cover - logged for debugging
+        response_text = getattr(exc.response, "text", "") if hasattr(exc, "response") else ""
+        logger.exception(
+            "Error al consultar AFIP CPE",
+            extra={
+                "event": "afip.cpe.consulta.error",
+                "nro_ctg": str(nro_ctg),
+                "status_code": getattr(exc.response, "status_code", None),
+                "payload": _sanitize_payload(response_text, [token, sign]),
+            },
+        )
+        raise CPEConsultationError(
+            "No fue posible contactar al servicio de AFIP",
+            code="AFIP_UNAVAILABLE",
+            is_transient=True,
+        ) from exc
+
+    sanitized_response = _sanitize_payload(r.text, [token, sign])
+    logger.info(
+        "Respuesta recibida de AFIP CPE",
+        extra={
+            "event": "afip.cpe.consulta.response",
+            "nro_ctg": str(nro_ctg),
+            "status_code": r.status_code,
+            "payload": sanitized_response,
+        },
+    )
+
     root = ET.fromstring(r.text)
+
+    fault = root.find(".//{http://schemas.xmlsoap.org/soap/envelope/}Fault") or root.find(".//Fault")
+    if fault is not None:
+        fault_data = _element_to_dict(fault)
+        code, message = _extract_error_info(fault_data)
+        normalized_code = _normalize_error_code(code, message)
+        raise CPEConsultationError(
+            message or "Respuesta de error de AFIP",
+            code=normalized_code,
+            is_transient=False,
+        )
+
     resp = root.find(".//respuesta")
     if resp is None:
-        raise RuntimeError("Respuesta inválida del WS CPE")
+        raise CPEConsultationError("Respuesta inválida del WS CPE", code="INVALID_RESPONSE")
+
     data = _element_to_dict(resp)
+    error_code, error_message = _extract_error_info(data)
+    if error_message:
+        normalized_code = _normalize_error_code(error_code, error_message)
+        raise CPEConsultationError(error_message, code=normalized_code)
     cab = data.get("cabecera", {}) or {}
     client_tax_id = _find_first(
         data,
@@ -249,6 +369,8 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
             {"pesoBrutoDescarga", "pesoBruto", "pesoBrutoTotal"},
         )
     )
+    if peso is None and peso_bruto_descarga is not None:
+        peso = _to_decimal(peso_bruto_descarga)
     dominio = _find_first(
         data,
         {

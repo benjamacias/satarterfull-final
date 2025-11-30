@@ -26,7 +26,7 @@ from billing.serializers import (
     ProductSerializer,
     ProviderSerializer,
 )
-from afip.cpe_service import _find_first, consultar_cpe_por_ctg
+from afip.cpe_service import _find_first, CPEConsultationError, consultar_cpe_por_ctg
 # from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
 
@@ -47,6 +47,21 @@ class FacturacionViewSet(viewsets.ViewSet):
                 s.validated_data["nro_ctg"],
                 peso_bruto_descarga=s.validated_data.get("peso_bruto_descarga"),
             )
+        except CPEConsultationError as exc:
+            detail = {"detail": str(exc)}
+            if exc.code:
+                detail["code"] = exc.code
+
+            if exc.is_transient:
+                return Response(detail, status=status.HTTP_502_BAD_GATEWAY)
+
+            status_code = status.HTTP_400_BAD_REQUEST
+            if exc.code == "TOKEN_EXPIRED":
+                status_code = status.HTTP_401_UNAUTHORIZED
+            elif exc.code == "INVALID_CTG":
+                status_code = status.HTTP_404_NOT_FOUND
+
+            return Response(detail, status=status_code)
         except Exception as exc:  # pragma: no cover - defensivo, depende de AFIP
             return Response(
                 {"detail": f"No fue posible consultar la carta de porte: {exc}"},
