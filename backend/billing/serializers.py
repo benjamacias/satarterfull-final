@@ -256,7 +256,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
 
 class CPEListSerializer(serializers.ModelSerializer):
-    vehicle_domain = serializers.CharField(source="vehicle_domain", read_only=True)
+    vehicle_domain = serializers.CharField(read_only=True)
 
     class Meta:
         model = CPEAutomotor
