@@ -43,7 +43,10 @@ class FacturacionViewSet(viewsets.ViewSet):
         s = CPERequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         try:
-            cpe = consultar_cpe_por_ctg(s.validated_data["nro_ctg"])
+            cpe = consultar_cpe_por_ctg(
+                s.validated_data["nro_ctg"],
+                peso_bruto_descarga=s.validated_data.get("peso_bruto_descarga"),
+            )
         except Exception as exc:  # pragma: no cover - defensivo, depende de AFIP
             return Response(
                 {"detail": f"No fue posible consultar la carta de porte: {exc}"},

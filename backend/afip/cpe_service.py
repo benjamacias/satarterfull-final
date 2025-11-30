@@ -120,7 +120,9 @@ def _match_by_tax_id(model, tax_id_value):
     return None
 
 
-def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
+def consultar_cpe_por_ctg(
+    nro_ctg: str, *, peso_bruto_descarga: Decimal | None = None
+) -> CPEAutomotor:
     token, sign = get_token_sign(service="wscpe")
     body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -250,7 +252,7 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
         "product_description": producto_descripcion or producto_codigo or "",
         "procedencia": str(procedencia).strip() if procedencia else "",
         "destino": str(destino).strip() if destino else "",
-        "peso_bruto_descarga": peso,
+        "peso_bruto_descarga": peso_bruto_descarga if peso_bruto_descarga is not None else peso,
     }
 
     obj, created = CPEAutomotor.objects.update_or_create(
