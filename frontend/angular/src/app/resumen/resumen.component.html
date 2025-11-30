@@ -169,6 +169,7 @@
       <thead>
         <tr>
           <th>CTG</th>
+          <th>Dominio</th>
           <th>Estado</th>
           <th>Vigencia</th>
           <th>Sucursal / Orden</th>
@@ -177,6 +178,7 @@
       <tbody>
         <tr *ngFor="let envio of envios">
           <td><strong>{{ envio.nro_ctg }}</strong></td>
+          <td>{{ envio.vehicle_domain || '—' }}</td>
           <td>
             <span class="badge" [ngClass]="envio.estado ? 'info' : 'warning'">{{ envio.estado || 'Sin estado' }}</span>
           </td>

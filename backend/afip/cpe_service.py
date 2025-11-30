@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import requests
 from django.utils import timezone
 
-from trips.models import CPEAutomotor
+from trips.models import CPEAutomotor, Vehicle
 from billing.models import Client, Product, Provider
 from .wsaa import get_token_sign
 
@@ -118,6 +118,13 @@ def _match_by_tax_id(model, tax_id_value):
         if _normalize_tax_id(candidate.tax_id) == normalized:
             return candidate
     return None
+
+
+def _normalize_domain(value: str | None) -> str | None:
+    if not value:
+        return None
+    cleaned = "".join(ch for ch in str(value).strip().upper() if ch.isalnum())
+    return cleaned or None
 
 
 def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
@@ -242,6 +249,25 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
             {"pesoBrutoDescarga", "pesoBruto", "pesoBrutoTotal"},
         )
     )
+    dominio = _find_first(
+        data,
+        {
+            "dominio",
+            "patente",
+            "dominioCamion",
+            "dominioCamión",
+            "dominioChasis",
+            "dominioAcoplado",
+            "patenteCamion",
+            "patenteChasis",
+            "patenteAcoplado",
+        },
+    )
+
+    domain = _normalize_domain(dominio)
+    vehicle = None
+    if domain:
+        vehicle, _ = Vehicle.objects.get_or_create(domain=domain)
 
     defaults_extra = {
         "client": client,
@@ -251,6 +277,7 @@ def consultar_cpe_por_ctg(nro_ctg: str) -> CPEAutomotor:
         "procedencia": str(procedencia).strip() if procedencia else "",
         "destino": str(destino).strip() if destino else "",
         "peso_bruto_descarga": peso,
+        "vehicle": vehicle,
     }
 
     obj, created = CPEAutomotor.objects.update_or_create(

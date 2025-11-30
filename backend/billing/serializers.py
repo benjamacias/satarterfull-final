@@ -36,6 +36,7 @@ def _calculate_net_weight(cpe: CPEAutomotor) -> Decimal | None:
 
 class CPESerializer(serializers.ModelSerializer):
     net_weight = serializers.SerializerMethodField()
+    vehicle_domain = serializers.SerializerMethodField()
 
     class Meta:
         model = CPEAutomotor
@@ -43,6 +44,9 @@ class CPESerializer(serializers.ModelSerializer):
 
     def get_net_weight(self, obj: CPEAutomotor):
         return _calculate_net_weight(obj)
+
+    def get_vehicle_domain(self, obj: CPEAutomotor):
+        return obj.vehicle_domain
 
 def _parse_afip_date(value: str, field_name: str) -> str:
     """Parse date strings accepted by AFIP (YYYYMMDD or YYYY-MM-DD)."""
@@ -245,6 +249,8 @@ class ClientSerializer(serializers.ModelSerializer):
 
 
 class CPEListSerializer(serializers.ModelSerializer):
+    vehicle_domain = serializers.CharField(source="vehicle_domain", read_only=True)
+
     class Meta:
         model = CPEAutomotor
         fields = [
@@ -256,6 +262,7 @@ class CPEListSerializer(serializers.ModelSerializer):
             "fecha_vencimiento",
             "sucursal",
             "nro_orden",
+            "vehicle_domain",
         ]
 
 
@@ -311,6 +318,7 @@ class CPEInvoiceSerializer(serializers.ModelSerializer):
     product_code = serializers.SerializerMethodField()
     total_amount = serializers.SerializerMethodField()
     net_weight = serializers.SerializerMethodField()
+    vehicle_domain = serializers.CharField(source="vehicle_domain", read_only=True)
 
     class Meta:
         model = CPEAutomotor
@@ -333,6 +341,7 @@ class CPEInvoiceSerializer(serializers.ModelSerializer):
             "product_id",
             "product_name",
             "product_code",
+            "vehicle_domain",
         ]
 
     def get_total_amount(self, obj: CPEAutomotor):

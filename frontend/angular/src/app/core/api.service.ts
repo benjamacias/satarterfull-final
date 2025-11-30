@@ -76,6 +76,7 @@ export interface EnvioResumen {
   fecha_vencimiento: string | null;
   sucursal: number | null;
   nro_orden: number | null;
+  vehicle_domain: string | null;
 }
 
 export interface Producto {
@@ -110,6 +111,8 @@ export interface CpeFacturaDetalle {
   product_id: number | null;
   product_name: string | null;
   product_code: string | null;
+  vehicle_domain: string | null;
+  vehicle?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
