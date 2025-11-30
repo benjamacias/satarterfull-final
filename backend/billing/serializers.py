@@ -9,6 +9,13 @@ from trips.models import CPEAutomotor
 
 class CPERequestSerializer(serializers.Serializer):
     nro_ctg = serializers.CharField()
+    peso_bruto_descarga = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        min_value=0,
+    )
 
 def _calculate_net_weight(cpe: CPEAutomotor) -> Decimal | None:
     raw = cpe.raw_response or {}
