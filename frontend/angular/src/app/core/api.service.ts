@@ -116,8 +116,12 @@ export interface CpeFacturaDetalle {
 export class ApiService {
   constructor(private http: HttpClient) {}
 
-  consultarCPE(nro_ctg: string): Observable<any> {
-    return this.http.post(`${API_BASE}/cpe/consultar/`, { nro_ctg });
+  consultarCPE(nro_ctg: string, peso_bruto_descarga?: number | null): Observable<any> {
+    const payload: { nro_ctg: string; peso_bruto_descarga?: number | null } = { nro_ctg };
+    if (peso_bruto_descarga !== undefined) {
+      payload.peso_bruto_descarga = peso_bruto_descarga;
+    }
+    return this.http.post(`${API_BASE}/cpe/consultar/`, payload);
   }
 
   emitirFactura(payload: EnvioFactura): Observable<any> {

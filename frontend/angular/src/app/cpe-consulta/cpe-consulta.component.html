@@ -7,6 +7,19 @@
       <input id="ctg" [(ngModel)]="nro_ctg" name="ctg" maxlength="14" placeholder="Ej: 00012345678901" />
       <p class="helper-text">Se admiten 12 a 14 dígitos sin guiones.</p>
     </div>
+    <div>
+      <label for="pesoDescarga">Peso de descarga</label>
+      <input
+        id="pesoDescarga"
+        type="number"
+        min="0"
+        step="0.01"
+        [(ngModel)]="pesoDescarga"
+        name="pesoDescarga"
+        placeholder="Ej: 25000"
+      />
+      <p class="helper-text">Opcional: prioriza este peso bruto de descarga sobre el informado por AFIP.</p>
+    </div>
     <div class="align-end">
       <button type="submit" [disabled]="loading || !nro_ctg.trim()">
         {{ loading ? 'Consultando…' : 'Consultar CPE' }}
@@ -52,6 +65,15 @@
         <strong>Hasta:</strong>
         {{ resultado.fecha_vencimiento | date: 'dd/MM/yyyy HH:mm' : 'UTC' }}
       </div>
+    </div>
+    <div>
+      <label>Peso bruto de descarga</label>
+      <div>{{ resultado.peso_bruto_descarga || '—' }}</div>
+    </div>
+    <div>
+      <label>Peso neto calculado</label>
+      <div>{{ resultado.net_weight || resultado.peso_bruto_descarga || '—' }}</div>
+      <p class="helper-text">Incluye el peso manual si fue cargado.</p>
     </div>
   </div>
   <details>

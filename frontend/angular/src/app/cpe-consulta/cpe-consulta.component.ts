@@ -8,6 +8,7 @@ import { ApiService } from '../core/api.service';
 })
 export class CpeConsultaComponent {
   nro_ctg = '';
+  pesoDescarga: number | null = null;
   resultado: any = null;
   loading = false;
   lastQuery = '';
@@ -21,7 +22,7 @@ export class CpeConsultaComponent {
     }
     this.loading = true;
     this.lastQuery = this.nro_ctg;
-    this.api.consultarCPE(this.nro_ctg).subscribe({
+    this.api.consultarCPE(this.nro_ctg, this.pesoDescarga).subscribe({
       next: r => {
         this.resultado = r;
         this.loading = false;
