@@ -2,6 +2,14 @@ from django.db import models
 
 from billing.models import Client, Product, Provider
 
+
+class Vehicle(models.Model):
+    domain = models.CharField(max_length=20, unique=True)
+
+    def __str__(self):
+        return self.domain
+
+
 class CPEAutomotor(models.Model):
     nro_ctg = models.CharField(max_length=14, unique=True, db_index=True)
     tipo_carta_porte = models.CharField(max_length=10, blank=True, null=True)
@@ -29,6 +37,17 @@ class CPEAutomotor(models.Model):
     )
     tariff = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     raw_response = models.JSONField(default=dict, blank=True)
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cpe_automotor",
+    )
 
     def __str__(self):
         return self.nro_ctg
+
+    @property
+    def vehicle_domain(self) -> str | None:
+        return self.vehicle.domain if self.vehicle else None

@@ -58,6 +58,10 @@
       <div>{{ resultado.sucursal || '—' }} / {{ resultado.nro_orden || '—' }}</div>
     </div>
     <div>
+      <label>Dominio</label>
+      <div class="tag">{{ resultado.vehicle_domain || 'No informado' }}</div>
+    </div>
+    <div>
       <label>Vigencia</label>
       <div>
         <strong>Desde:</strong>
@@ -65,15 +69,6 @@
         <strong>Hasta:</strong>
         {{ resultado.fecha_vencimiento | date: 'dd/MM/yyyy HH:mm' : 'UTC' }}
       </div>
-    </div>
-    <div>
-      <label>Peso bruto de descarga</label>
-      <div>{{ resultado.peso_bruto_descarga || '—' }}</div>
-    </div>
-    <div>
-      <label>Peso neto calculado</label>
-      <div>{{ resultado.net_weight || resultado.peso_bruto_descarga || '—' }}</div>
-      <p class="helper-text">Incluye el peso manual si fue cargado.</p>
     </div>
   </div>
   <details>

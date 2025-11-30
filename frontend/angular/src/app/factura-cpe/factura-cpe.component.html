@@ -39,6 +39,7 @@
         <tr>
           <th></th>
           <th>CTG</th>
+          <th>Dominio</th>
           <th>Fecha emisión</th>
           <th>N° orden</th>
           <th>Producto</th>
@@ -59,6 +60,7 @@
             />
           </td>
           <td><strong>{{ cpe.nro_ctg }}</strong></td>
+          <td>{{ cpe.vehicle_domain || '—' }}</td>
           <td>{{ cpe.fecha_emision | date:'dd/MM/yyyy HH:mm' }}</td>
           <td>{{ cpe.nro_orden || '—' }}</td>
           <td>{{ cpe.product_name || cpe.product_description || '—' }}</td>
