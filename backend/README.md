@@ -24,6 +24,7 @@ El helper `afip/obtener_token.py` manejará `token.txt`, `sign.txt`, `ta.xml` en
 - POST `http://localhost:8000/api/facturas/emitir/` → ver `billing/serializers.py`
 - GET  `http://localhost:8000/api/facturas/`
 - POST `http://localhost:8000/api/{id}/facturas/enviar/`
+- GET  `http://localhost:8000/api/estadisticas/dominios/` → métricas de movimientos y facturación estimada por dominio
 
 ## Notas
 - Ajusta `TU_CUIT_EMISOR` en `afip/cpe_service.py` y `afip/fe_service.py`.
