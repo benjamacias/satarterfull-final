@@ -115,6 +115,18 @@ export interface CpeFacturaDetalle {
   vehicle?: number | null;
 }
 
+export interface DominioEstadistica {
+  dominio: string;
+  movimientos: number;
+  total_ctg: number;
+  facturacion: number;
+}
+
+export interface EstadisticasDominiosResponse {
+  mayores_movimientos: DominioEstadistica[];
+  mayor_facturacion: DominioEstadistica[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   constructor(private http: HttpClient) {}
@@ -185,5 +197,9 @@ export class ApiService {
 
   descargarPdfCpe(cpeId: number): Observable<Blob> {
     return this.http.get(`${API_BASE}/cpe/${cpeId}/pdf/`, { responseType: 'blob' });
+  }
+
+  obtenerEstadisticasDominios(): Observable<EstadisticasDominiosResponse> {
+    return this.http.get<EstadisticasDominiosResponse>(`${API_BASE}/estadisticas/dominios/`);
   }
 }
