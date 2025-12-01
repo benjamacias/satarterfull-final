@@ -1,0 +1,68 @@
+<section class="card">
+  <div class="header">
+    <div>
+      <h2>Panel de movimientos por dominio</h2>
+      <p class="helper-text">Visualizá los dominios que más se mueven y cuáles generan mayor facturación.</p>
+    </div>
+    <button type="button" (click)="recargar()" [disabled]="loading">{{ loading ? 'Actualizando…' : 'Actualizar datos' }}</button>
+  </div>
+
+  <div class="summaries" *ngIf="!loading">
+    <div class="summary-card">
+      <div class="label">Dominios detectados</div>
+      <div class="value">{{ totalDominios || '—' }}</div>
+      <div class="helper-text">Basado en los últimos movimientos registrados</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Movimientos totales</div>
+      <div class="value">{{ totalMovimientos || '—' }}</div>
+      <div class="helper-text">Suma de cartas de porte vinculadas</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Facturación estimada</div>
+      <div class="value">$ {{ totalFacturacion | number:'1.0-2' }}</div>
+      <div class="helper-text">Calculada según tarifas y peso bruto</div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="empty-state">Cargando estadísticas…</div>
+  <div *ngIf="!loading && error" class="empty-state">{{ error }}</div>
+  <div *ngIf="!loading && !error && stats && !stats.mayores_movimientos.length" class="empty-state">
+    No se encontraron movimientos para mostrar. Cuando consultes cartas de porte verás los gráficos aquí.
+  </div>
+
+  <div *ngIf="!loading && !error && stats && stats.mayores_movimientos.length" class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <h3>Mayores movimientos por dominio</h3>
+          <p class="helper-text">Top de dominios con más actividad reciente.</p>
+        </div>
+        <span class="badge info">Movimientos</span>
+      </div>
+      <canvas #movimientosChart></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <h3>Dominios con más movimientos totales</h3>
+          <p class="helper-text">Comparativa de cartas de porte procesadas.</p>
+        </div>
+        <span class="badge success">Totales</span>
+      </div>
+      <canvas #totalesChart></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <h3>Dominios con mayor facturación</h3>
+          <p class="helper-text">Estimación según tarifas y peso bruto declarado.</p>
+        </div>
+        <span class="badge warning">$</span>
+      </div>
+      <canvas #facturacionChart></canvas>
+    </div>
+  </div>
+</section>

@@ -10,6 +10,7 @@ import { FacturasListaComponent } from './facturas-lista/facturas-lista.componen
 import { ResumenComponent } from './resumen/resumen.component';
 import { FacturaCpeComponent } from './factura-cpe/factura-cpe.component';
 import { ProductosComponent } from './productos/productos.component';
+import { VehiculosDashboardComponent } from './vehiculos-dashboard/vehiculos-dashboard.component';
 
 const routes: Routes = [
   { path: "", redirectTo: "cpe", pathMatch: "full" },
@@ -19,10 +20,11 @@ const routes: Routes = [
   { path: "facturas", component: FacturasListaComponent },
   { path: "resumen", component: ResumenComponent },
   { path: "productos", component: ProductosComponent },
+  { path: "vehiculos-dashboard", component: VehiculosDashboardComponent },
 ];
 
 @NgModule({
-  declarations: [AppComponent, CpeConsultaComponent, FacturarComponent, FacturasListaComponent, ResumenComponent, FacturaCpeComponent, ProductosComponent],
+  declarations: [AppComponent, CpeConsultaComponent, FacturarComponent, FacturasListaComponent, ResumenComponent, FacturaCpeComponent, ProductosComponent, VehiculosDashboardComponent],
   imports: [BrowserModule, HttpClientModule, FormsModule, RouterModule.forRoot(routes)],
   providers: [],
   bootstrap: [AppComponent]
