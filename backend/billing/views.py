@@ -20,7 +20,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 # from rest_framework.exceptions import ValidationError
@@ -35,8 +35,8 @@ from billing.serializers import (
     ClientSerializer,
     EmitirFacturaSerializer,
     InvoiceSerializer,
-    ProductSerializer,
     ProviderSerializer,
+    TarifaSerializer,
 )
 from afip.cpe_service import _find_first, CPEConsultationError, consultar_cpe_por_ctg
 # from afip.fe_service import emitir_y_guardar_factura
@@ -47,6 +47,18 @@ def _normalize_tax_id(value: str | None) -> str:
     if not value:
         return ""
     return "".join(ch for ch in str(value) if ch.isdigit())
+
+
+class TarifaProductoViewSet(
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = Product.objects.all().order_by("name")
+    serializer_class = TarifaSerializer
 
 class FacturacionViewSet(viewsets.ViewSet):
 
@@ -247,28 +259,6 @@ class FacturacionViewSet(viewsets.ViewSet):
 
         qs = Provider.objects.order_by("name")
         return Response(ProviderSerializer(qs, many=True).data)
-
-    @action(detail=False, methods=["get", "post"], url_path="productos")
-    def productos(self, request):
-        if request.method.lower() == "post":
-            serializer = ProductSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            product = serializer.save()
-            return Response(
-                ProductSerializer(product).data,
-                status=status.HTTP_201_CREATED,
-            )
-
-        qs = Product.objects.order_by("name")
-        return Response(ProductSerializer(qs, many=True).data)
-
-    @action(detail=False, methods=["patch"], url_path="productos/(?P<product_id>[^/.]+)")
-    def actualizar_producto(self, request, product_id=None):
-        producto = get_object_or_404(Product, pk=product_id)
-        serializer = ProductSerializer(producto, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(ProductSerializer(producto).data)
 
     @action(detail=False, methods=["get"], url_path="clientes/(?P<client_id>[^/.]+)/cpe")
     def cpe_por_cliente(self, request, client_id=None):

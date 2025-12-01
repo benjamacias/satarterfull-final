@@ -315,6 +315,12 @@ class ProductSerializer(serializers.ModelSerializer):
         return value
 
 
+class TarifaSerializer(ProductSerializer):
+    class Meta(ProductSerializer.Meta):
+        model = Product
+        fields = ProductSerializer.Meta.fields
+
+
 class CPEInvoiceSerializer(serializers.ModelSerializer):
     client_id = serializers.SerializerMethodField()
     client_name = serializers.SerializerMethodField()
