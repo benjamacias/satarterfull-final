@@ -2,9 +2,21 @@ import base64
 import binascii
 import json
 from datetime import timedelta
+from decimal import Decimal
 
 from django.core.mail import EmailMessage
-from django.db.models import Max
+from django.db.models import (
+    Case,
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Max,
+    Sum,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -163,6 +175,64 @@ class FacturacionViewSet(viewsets.ViewSet):
     def list_envios(self, request):
         qs = CPEAutomotor.objects.order_by("-fecha_emision", "-id")
         return Response(CPEListSerializer(qs, many=True).data)
+
+    @action(detail=False, methods=["get"], url_path="estadisticas/dominios")
+    def estadisticas_dominios(self, request):
+        facturacion_expr = Case(
+            When(
+                peso_bruto_descarga__isnull=False,
+                then=ExpressionWrapper(
+                    Coalesce(F("tariff"), Value(Decimal("0"))) * F("peso_bruto_descarga"),
+                    output_field=DecimalField(max_digits=20, decimal_places=2),
+                ),
+            ),
+            default=Coalesce(F("tariff"), Value(Decimal("0"))),
+            output_field=DecimalField(max_digits=20, decimal_places=2),
+        )
+
+        dominios = (
+            CPEAutomotor.objects.filter(vehicle__domain__isnull=False)
+            .values("vehicle__domain")
+            .annotate(
+                dominio=F("vehicle__domain"),
+                movimientos=Count("id"),
+                total_ctg=Count("id"),
+                facturacion=Coalesce(
+                    Sum(facturacion_expr),
+                    Value(
+                        Decimal("0"),
+                        output_field=DecimalField(max_digits=20, decimal_places=2),
+                    ),
+                ),
+            )
+        )
+
+        mayores_movimientos = [
+            {
+                "dominio": entry["dominio"],
+                "movimientos": entry["movimientos"],
+                "facturacion": entry["facturacion"],
+                "total_ctg": entry["total_ctg"],
+            }
+            for entry in dominios.order_by("-movimientos", "-facturacion")
+        ]
+
+        mayor_facturacion = [
+            {
+                "dominio": entry["dominio"],
+                "movimientos": entry["movimientos"],
+                "facturacion": entry["facturacion"],
+                "total_ctg": entry["total_ctg"],
+            }
+            for entry in dominios.order_by("-facturacion", "-movimientos")
+        ]
+
+        return Response(
+            {
+                "mayores_movimientos": mayores_movimientos,
+                "mayor_facturacion": mayor_facturacion,
+            }
+        )
 
     @action(detail=False, methods=["get", "post"], url_path="proveedores")
     def proveedores(self, request):
