@@ -1,0 +1,32 @@
+<section class="auth-card">
+  <h1>Crear cuenta</h1>
+  <form (ngSubmit)="onSubmit()" novalidate>
+    <div class="grid">
+      <label>
+        Nombre
+        <input type="text" name="firstName" [(ngModel)]="firstName" autocomplete="given-name" />
+      </label>
+      <label>
+        Apellido
+        <input type="text" name="lastName" [(ngModel)]="lastName" autocomplete="family-name" />
+      </label>
+    </div>
+    <label>
+      Correo electrónico
+      <input type="email" name="email" [(ngModel)]="email" required autocomplete="email" />
+    </label>
+    <label>
+      Contraseña
+      <input type="password" name="password" [(ngModel)]="password" required autocomplete="new-password" />
+    </label>
+    <label>
+      Teléfono
+      <input type="tel" name="phone" [(ngModel)]="phone" required autocomplete="tel" />
+    </label>
+
+    <button type="submit" [disabled]="loading">{{ loading ? 'Registrando…' : 'Registrar' }}</button>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+    <p class="alt-action">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+  </form>
+</section>

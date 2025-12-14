@@ -4,6 +4,31 @@ import { Observable } from 'rxjs';
 
 const API_BASE = '/api';
 
+export interface AuthTokens {
+  access: string;
+  refresh: string;
+}
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  phone_number?: string;
+  first_name?: string;
+  last_name?: string;
+  is_staff?: boolean;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload extends LoginPayload {
+  phone_number: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 export interface Client {
   id: number;
   name: string;
@@ -201,5 +226,21 @@ export class ApiService {
 
   obtenerEstadisticasDominios(): Observable<EstadisticasDominiosResponse> {
     return this.http.get<EstadisticasDominiosResponse>(`${API_BASE}/estadisticas/dominios/`);
+  }
+
+  login(payload: LoginPayload): Observable<AuthTokens> {
+    return this.http.post<AuthTokens>(`${API_BASE}/auth/login/`, payload);
+  }
+
+  register(payload: RegisterPayload): Observable<AuthUser> {
+    return this.http.post<AuthUser>(`${API_BASE}/auth/register/`, payload);
+  }
+
+  refreshToken(refresh: string): Observable<AuthTokens> {
+    return this.http.post<AuthTokens>(`${API_BASE}/auth/refresh/`, { refresh });
+  }
+
+  obtenerPerfil(): Observable<AuthUser> {
+    return this.http.get<AuthUser>(`${API_BASE}/auth/profile/`);
   }
 }

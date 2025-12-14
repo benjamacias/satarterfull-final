@@ -3,15 +3,27 @@
     <span class="brand-mark">Count</span>
     <span class="brand-highlight">Sistem</span>
   </div>
-  <nav class="main-nav">
-    <a routerLink="/cpe" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Consulta CPE</a>
-    <a routerLink="/facturar" routerLinkActive="active">Emitir factura</a>
-    <a routerLink="/facturar/cpe" routerLinkActive="active">Facturar CPE</a>
-    <a routerLink="/facturas" routerLinkActive="active">Comprobantes</a>
-    <a routerLink="/resumen" routerLinkActive="active">Clientes &amp; Envíos</a>
-    <a routerLink="/productos" routerLinkActive="active">Productos</a>
-    <a routerLink="/vehiculos-dashboard" routerLinkActive="active">Movimientos por dominio</a>
-  </nav>
+  <ng-container *ngIf="user$ | async as user; else guestLinks">
+    <nav class="main-nav">
+      <a routerLink="/cpe" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Consulta CPE</a>
+      <a routerLink="/facturar" routerLinkActive="active">Emitir factura</a>
+      <a routerLink="/facturar/cpe" routerLinkActive="active">Facturar CPE</a>
+      <a routerLink="/facturas" routerLinkActive="active">Comprobantes</a>
+      <a routerLink="/resumen" routerLinkActive="active">Clientes &amp; Envíos</a>
+      <a routerLink="/productos" routerLinkActive="active">Productos</a>
+      <a routerLink="/vehiculos-dashboard" routerLinkActive="active">Movimientos por dominio</a>
+    </nav>
+    <div class="user-menu">
+      <span class="user-email">{{ user.email }}</span>
+      <button type="button" (click)="logout()">Cerrar sesión</button>
+    </div>
+  </ng-container>
+  <ng-template #guestLinks>
+    <nav class="main-nav">
+      <a routerLink="/login" routerLinkActive="active">Iniciar sesión</a>
+      <a routerLink="/register" routerLinkActive="active">Crear cuenta</a>
+    </nav>
+  </ng-template>
 </header>
 <main class="app-content">
   <router-outlet></router-outlet>
