@@ -1,8 +1,11 @@
 from unittest.mock import Mock, patch
 
+from django.contrib.auth import get_user_model
+
 import requests
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from billing.models import Client
 
@@ -17,6 +20,13 @@ def _build_response(status_code: int, content: str) -> requests.Response:
 
 class ConsultarCPEAPITestCase(APITestCase):
     def setUp(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            username="admin", password="password", is_staff=True
+        )
+        admin_token = str(RefreshToken.for_user(admin).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {admin_token}")
+
         self.client_obj = Client.objects.create(
             name="Cliente Test",
             email="cliente@example.com",

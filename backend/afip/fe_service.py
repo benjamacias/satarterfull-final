@@ -54,6 +54,7 @@ def emitir_y_guardar_factura(
         "observations": [],
         "events": [],
     }
+    result = fe.solicitar_cae(**cae_kwargs)
 
     metadata = {
         "condicion_iva_receptor_id": condicion_iva_receptor_id,

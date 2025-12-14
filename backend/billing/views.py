@@ -1,7 +1,6 @@
 import base64
 import binascii
 import json
-from datetime import timedelta
 from decimal import Decimal
 
 from django.core.mail import EmailMessage
@@ -11,7 +10,6 @@ from django.db.models import (
     DecimalField,
     ExpressionWrapper,
     F,
-    Max,
     Sum,
     Value,
     When,
@@ -19,9 +17,9 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.response import Response
 # from rest_framework.exceptions import ValidationError
 
@@ -39,8 +37,17 @@ from billing.serializers import (
     TarifaSerializer,
 )
 from afip.cpe_service import _find_first, CPEConsultationError, consultar_cpe_por_ctg
-# from afip.fe_service import emitir_y_guardar_factura
+from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
+
+
+class AdminWriteAuthenticatedRead(BasePermission):
+    """Allow authenticated reads and restrict writes to staff users."""
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
 
 
 def _normalize_tax_id(value: str | None) -> str:
@@ -59,8 +66,10 @@ class TarifaProductoViewSet(
 ):
     queryset = Product.objects.all().order_by("name")
     serializer_class = TarifaSerializer
+    permission_classes = [AdminWriteAuthenticatedRead]
 
 class FacturacionViewSet(viewsets.ViewSet):
+    permission_classes = [AdminWriteAuthenticatedRead]
 
     @action(detail=False, methods=["post"], url_path="cpe/consultar")
     def consultar_cpe(self, request):
@@ -99,53 +108,20 @@ class FacturacionViewSet(viewsets.ViewSet):
         s = EmitirFacturaSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         client = Client.objects.get(pk=s.validated_data["client_id"])
-
-        # emisión real hacia AFIP deshabilitada para modo de prueba:
-        # try:
-        #     inv = emitir_y_guardar_factura(
-        #         client=client,
-        #         amount=s.validated_data["amount"],
-        #         pto_vta=s.validated_data["pto_vta"],
-        #         cbte_tipo=s.validated_data["cbte_tipo"],
-        #         doc_tipo=s.validated_data["doc_tipo"],
-        #         doc_nro=s.validated_data["doc_nro"],
-        #         condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
-        #         cbtes_asoc=s.validated_data.get("cbtes_asoc"),
-        #         periodo_asoc=s.validated_data.get("periodo_asoc"),
-        #     )
-        # except ValueError as exc:
-        #     raise ValidationError({"cbte_tipo": [str(exc)]})
-
-        next_number = (
-            Invoice.objects.filter(
+        try:
+            inv = emitir_y_guardar_factura(
+                client=client,
+                amount=s.validated_data["amount"],
                 pto_vta=s.validated_data["pto_vta"],
                 cbte_tipo=s.validated_data["cbte_tipo"],
+                doc_tipo=s.validated_data["doc_tipo"],
+                doc_nro=s.validated_data["doc_nro"],
+                condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
+                cbtes_asoc=s.validated_data.get("cbtes_asoc"),
+                periodo_asoc=s.validated_data.get("periodo_asoc"),
             )
-            .aggregate(Max("cbte_nro"))
-            .get("cbte_nro__max")
-            or 0
-        )
-
-        metadata = {
-            "modo": "pruebas",
-            "doc_tipo": s.validated_data["doc_tipo"],
-            "doc_nro": s.validated_data["doc_nro"],
-        }
-        if s.validated_data.get("cbtes_asoc"):
-            metadata["cbtes_asoc"] = s.validated_data["cbtes_asoc"]
-        if s.validated_data.get("periodo_asoc"):
-            metadata["periodo_asoc"] = s.validated_data["periodo_asoc"]
-
-        inv = Invoice.objects.create(
-            client=client,
-            amount=s.validated_data["amount"],
-            pto_vta=s.validated_data["pto_vta"],
-            cbte_tipo=s.validated_data["cbte_tipo"],
-            cbte_nro=next_number + 1,
-            cae=f"TEST-CAE-{next_number + 1:08d}",
-            cae_due=(timezone.now() + timedelta(days=30)).strftime("%Y%m%d"),
-            metadata=metadata,
-        )
+        except ValueError as exc:
+            return Response({"cbte_tipo": [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(InvoiceSerializer(inv).data, status=status.HTTP_201_CREATED)
 
