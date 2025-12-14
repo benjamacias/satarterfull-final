@@ -5,3 +5,4 @@ xhtml2pdf>=0.2.15
 lxml>=4.9
 requests>=2.31
 djangorestframework-simplejwt>=5.3
+zeep>=4.3

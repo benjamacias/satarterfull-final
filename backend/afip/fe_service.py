@@ -1,11 +1,12 @@
 from io import BytesIO
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
-from xhtml2pdf import pisa
+
 from billing.models import Invoice
 from . import solicitar_cae as fe
 
 def _render_pdf_to_bytes(template_name: str, context: dict) -> bytes:
+    from xhtml2pdf import pisa
     html = render_to_string(template_name, context)
     out = BytesIO()
     pisa.CreatePDF(src=html, dest=out, encoding="utf-8")
