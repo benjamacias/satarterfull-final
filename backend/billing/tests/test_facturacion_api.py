@@ -2,14 +2,27 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import afip.fe_service  # noqa: F401
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from billing.models import Client, Invoice
 
 
 class FacturacionAPITestCase(APITestCase):
     def setUp(self):
+        user_model = get_user_model()
+        self.admin = user_model.objects.create_user(
+            username="admin", password="password", is_staff=True
+        )
+        self.user = user_model.objects.create_user(
+            username="user", password="password", is_staff=False
+        )
+        self.admin_token = str(RefreshToken.for_user(self.admin).access_token)
+        self.user_token = str(RefreshToken.for_user(self.user).access_token)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
         self.client_obj = Client.objects.create(
             name="Cliente Test",
             email="cliente@example.com",
@@ -17,6 +30,9 @@ class FacturacionAPITestCase(APITestCase):
             fiscal_address="Calle Falsa 123",
             tax_condition=Client.CONDICION_IVA_CHOICES[0][0],
         )
+
+    def authenticate(self, token: str):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
     @patch("afip.fe_service.fe.obtener_tipos_comprobante_validos", return_value=[11, 12, 13])
     @patch("afip.fe_service._render_pdf_to_bytes", return_value=b"PDF")
@@ -139,3 +155,26 @@ class FacturacionAPITestCase(APITestCase):
         self.assertIn("cbte_tipo", response.data)
         mock_solicitar_cae.assert_not_called()
         mock_tipos.assert_called_once_with(cuit="TU_CUIT_EMISOR", pto_vta=3)
+
+    def test_usuario_no_admin_no_puede_emitir(self):
+        self.authenticate(self.user_token)
+
+        payload = {
+            "client_id": self.client_obj.id,
+            "amount": "100.00",
+            "pto_vta": 3,
+            "cbte_tipo": 12,
+            "doc_tipo": 80,
+            "doc_nro": "20-12345678-9",
+        }
+
+        response = self.client.post("/api/facturas/emitir/", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_listado_facturas_requiere_autenticacion(self):
+        self.client.credentials()
+
+        response = self.client.get("/api/facturas/")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

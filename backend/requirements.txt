@@ -4,3 +4,4 @@ django-cors-headers>=4.3
 xhtml2pdf>=0.2.15
 lxml>=4.9
 requests>=2.31
+djangorestframework-simplejwt>=5.3
