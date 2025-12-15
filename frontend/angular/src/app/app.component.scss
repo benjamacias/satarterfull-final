@@ -64,6 +64,33 @@
   background: #38bdf8;
 }
 
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.user-email {
+  padding: 0.4rem 0.75rem;
+  background: rgba(56, 189, 248, 0.15);
+  border-radius: 999px;
+}
+
+.user-menu button {
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  padding: 0.55rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.user-menu button:hover {
+  background: #dc2626;
+}
+
 .app-content {
   padding: 2rem;
   min-height: calc(100vh - 210px);

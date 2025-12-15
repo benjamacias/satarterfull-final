@@ -1,0 +1,18 @@
+<section class="auth-card">
+  <h1>Iniciar sesión</h1>
+  <form (ngSubmit)="onSubmit()" novalidate>
+    <label>
+      Correo electrónico
+      <input type="email" name="email" [(ngModel)]="email" required autocomplete="email" />
+    </label>
+    <label>
+      Contraseña
+      <input type="password" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+    </label>
+
+    <button type="submit" [disabled]="loading">{{ loading ? 'Ingresando…' : 'Ingresar' }}</button>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+    <p class="alt-action">¿No tienes cuenta? <a routerLink="/register">Crear cuenta</a></p>
+  </form>
+</section>
