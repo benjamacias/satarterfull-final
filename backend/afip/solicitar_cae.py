@@ -121,7 +121,7 @@ def consultar_cliente(cuit_cliente, token, sign):
     - No inventa otros datos: solo organiza lo que AFIP publica
     - Si hay Fault, retorna None
     """
-    CUIT_REP = "27225103440"  # tu CUIT emisor
+    CUIT_REP = ""  # tu CUIT emisor
     PADRON_A13_URL = "https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA13"
 
     ns = {
