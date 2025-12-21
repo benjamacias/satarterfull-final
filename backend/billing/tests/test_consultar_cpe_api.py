@@ -61,6 +61,31 @@ class ConsultarCPEAPITestCase(APITestCase):
 
     @patch("afip.cpe_service.get_token_sign", return_value=("TOKEN", "SIGN"))
     @patch("afip.cpe_service.requests.post")
+    def test_consultar_cpe_ok_sin_autenticacion(self, mock_post: Mock, _mock_token):
+        xml = """
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+          <soapenv:Body>
+            <respuesta>
+              <cabecera>
+                <nroCTG>1234</nroCTG>
+              </cabecera>
+            </respuesta>
+          </soapenv:Body>
+        </soapenv:Envelope>
+        """
+        mock_post.return_value = _build_response(status.HTTP_200_OK, xml)
+
+        self.client.credentials()
+
+        response = self.client.post(
+            "/api/cpe/consultar/", {"nro_ctg": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["nro_ctg"], "1234")
+
+    @patch("afip.cpe_service.get_token_sign", return_value=("TOKEN", "SIGN"))
+    @patch("afip.cpe_service.requests.post")
     def test_consultar_cpe_http_error(self, mock_post: Mock, _mock_token):
         mock_post.return_value = _build_response(status.HTTP_500_INTERNAL_SERVER_ERROR, "")
 

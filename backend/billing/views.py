@@ -19,7 +19,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import SAFE_METHODS, BasePermission
+from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission
 from rest_framework.response import Response
 # from rest_framework.exceptions import ValidationError
 
@@ -71,7 +71,12 @@ class TarifaProductoViewSet(
 class FacturacionViewSet(viewsets.ViewSet):
     permission_classes = [AdminWriteAuthenticatedRead]
 
-    @action(detail=False, methods=["post"], url_path="cpe/consultar")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="cpe/consultar",
+        permission_classes=[AllowAny],
+    )
     def consultar_cpe(self, request):
         s = CPERequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
