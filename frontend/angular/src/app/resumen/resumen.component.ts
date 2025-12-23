@@ -15,12 +15,13 @@ export class ResumenComponent implements OnInit {
   loadingProveedores = false;
   loadingProductos = false;
   loadingEnvios = false;
-  creandoCliente = false;
+  guardandoCliente = false;
   creandoProveedor = false;
   mensajeCliente: string | null = null;
   mensajeProveedor: string | null = null;
   nuevoCliente: NuevoCliente = this.defaultNuevoCliente();
   nuevoProveedor: NuevoProveedor = this.defaultNuevoProveedor();
+  clienteEditando: Client | null = null;
   edicionProductos: Record<number, number> = {};
   actualizandoProducto: Record<number, boolean> = {};
   taxConditionOptions = [
@@ -103,7 +104,7 @@ export class ResumenComponent implements OnInit {
   }
 
   guardarCliente(): void {
-    if (this.creandoCliente) {
+    if (this.guardandoCliente) {
       return;
     }
 
@@ -121,19 +122,49 @@ export class ResumenComponent implements OnInit {
       return;
     }
 
-    this.creandoCliente = true;
-    this.api.crearCliente(payload).subscribe({
+    this.guardandoCliente = true;
+    const accion = this.clienteEditando
+      ? this.api.actualizarCliente(this.clienteEditando.id, payload)
+      : this.api.crearCliente(payload);
+
+    accion.subscribe({
       next: client => {
-        this.creandoCliente = false;
+        this.guardandoCliente = false;
         this.nuevoCliente = this.defaultNuevoCliente();
-        this.clientes = [...this.clientes, client].sort((a, b) => a.name.localeCompare(b.name));
-        this.mensajeCliente = 'Cliente guardado correctamente. Ya podés seleccionarlo al emitir una factura.';
+        this.clienteEditando = null;
+        if (this.clientes.find(c => c.id === client.id)) {
+          this.clientes = this.clientes
+            .map(c => (c.id === client.id ? client : c))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          this.mensajeCliente = 'Cliente actualizado correctamente.';
+        } else {
+          this.clientes = [...this.clientes, client].sort((a, b) => a.name.localeCompare(b.name));
+          this.mensajeCliente = 'Cliente guardado correctamente. Ya podés seleccionarlo al emitir una factura.';
+        }
       },
       error: _ => {
-        this.creandoCliente = false;
+        this.guardandoCliente = false;
         alert('No fue posible guardar el cliente. Revisá los datos ingresados.');
       }
     });
+  }
+
+  editarCliente(cliente: Client): void {
+    this.mensajeCliente = null;
+    this.clienteEditando = cliente;
+    this.nuevoCliente = {
+      name: cliente.name,
+      email: cliente.email,
+      tax_id: cliente.tax_id,
+      fiscal_address: cliente.fiscal_address,
+      tax_condition: cliente.tax_condition,
+    };
+  }
+
+  cancelarEdicionCliente(): void {
+    this.clienteEditando = null;
+    this.nuevoCliente = this.defaultNuevoCliente();
+    this.mensajeCliente = null;
   }
 
   guardarProveedor(): void {

@@ -162,6 +162,16 @@ class FacturacionViewSet(viewsets.ViewSet):
         qs = Client.objects.order_by("name")
         return Response(ClientSerializer(qs, many=True).data)
 
+    @action(detail=False, methods=["put", "patch"], url_path="clientes/(?P<client_id>[^/.]+)")
+    def actualizar_cliente(self, request, client_id=None):
+        client = get_object_or_404(Client, pk=client_id)
+        serializer = ClientSerializer(
+            client, data=request.data, partial=request.method.lower() == "patch"
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
     @action(detail=False, methods=["get"], url_path="envios")
     def list_envios(self, request):
         qs = CPEAutomotor.objects.order_by("-fecha_emision", "-id")

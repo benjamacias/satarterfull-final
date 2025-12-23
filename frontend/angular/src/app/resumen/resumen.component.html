@@ -3,7 +3,7 @@
   <p class="helper-text">Administrá los datos fiscales desde aquí para reutilizarlos al emitir facturas.</p>
 
   <div class="card-inline">
-    <h3>Agregar nuevo cliente</h3>
+    <h3>{{ clienteEditando ? 'Editar cliente' : 'Agregar nuevo cliente' }}</h3>
     <div class="grid two-columns">
       <div>
         <label for="nuevoNombre">Nombre y apellido / Razón social</label>
@@ -29,9 +29,14 @@
       </div>
     </div>
     <div class="align-end">
-      <button type="button" (click)="guardarCliente()" [disabled]="creandoCliente">
-        {{ creandoCliente ? 'Guardando cliente…' : 'Guardar cliente' }}
-      </button>
+      <div class="actions">
+        <button type="button" (click)="guardarCliente()" [disabled]="guardandoCliente">
+          {{ guardandoCliente ? 'Guardando cliente…' : (clienteEditando ? 'Actualizar cliente' : 'Guardar cliente') }}
+        </button>
+        <button *ngIf="clienteEditando" type="button" class="secondary" (click)="cancelarEdicionCliente()" [disabled]="guardandoCliente">
+          Cancelar
+        </button>
+      </div>
     </div>
     <p *ngIf="mensajeCliente" class="helper-text success">{{ mensajeCliente }}</p>
   </div>
@@ -49,6 +54,7 @@
           <th>CUIT</th>
           <th>Condición fiscal</th>
           <th>Dirección fiscal</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -58,6 +64,9 @@
           <td>{{ cliente.tax_id }}</td>
           <td>{{ cliente.tax_condition_display }}</td>
           <td>{{ cliente.fiscal_address }}</td>
+          <td class="align-end">
+            <button type="button" (click)="editarCliente(cliente)">Editar</button>
+          </td>
         </tr>
       </tbody>
     </table>
