@@ -44,7 +44,7 @@ class ProductosAPITestCase(APITestCase):
         self.assertEqual(product.afip_code, payload["afip_code"])
         self.assertEqual(product.default_tariff, Decimal("150.50"))
 
-    def test_usuario_no_admin_no_puede_crear(self):
+    def test_usuario_no_admin_tambien_puede_crear(self):
         self.authenticate(self.user_token)
         payload = {
             "name": "Granos de Maíz",
@@ -54,7 +54,8 @@ class ProductosAPITestCase(APITestCase):
 
         response = self.client.post("/api/productos/", payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], payload["name"])
 
     def test_crear_producto_requiere_nombre(self):
         self.authenticate(self.admin_token)

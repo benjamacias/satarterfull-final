@@ -26,7 +26,7 @@ const routes: Routes = [
   { path: 'facturar/cpe', component: FacturaCpeComponent, canActivate: [AuthGuard] },
   { path: 'facturas', component: FacturasListaComponent, canActivate: [AuthGuard] },
   { path: 'resumen', component: ResumenComponent, canActivate: [AuthGuard] },
-  { path: 'productos', component: ProductosComponent, canActivate: [AuthGuard, AdminGuard] },
+  { path: 'productos', component: ProductosComponent, canActivate: [AuthGuard] },
   { path: 'vehiculos-dashboard', component: VehiculosDashboardComponent, canActivate: [AuthGuard] },
   { path: '**', redirectTo: 'cpe' },
 ];

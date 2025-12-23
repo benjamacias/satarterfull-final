@@ -184,6 +184,10 @@ export class ApiService {
     return this.http.post<Client>(`${API_BASE}/clientes/`, payload);
   }
 
+  actualizarCliente(clienteId: number, payload: NuevoCliente): Observable<Client> {
+    return this.http.put<Client>(`${API_BASE}/clientes/${clienteId}/`, payload);
+  }
+
   listarProveedores(): Observable<Provider[]> {
     return this.http.get<Provider[]>(`${API_BASE}/proveedores/`);
   }
