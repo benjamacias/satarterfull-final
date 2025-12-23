@@ -22,7 +22,7 @@ class ConsultarCPEAPITestCase(APITestCase):
     def setUp(self):
         user_model = get_user_model()
         admin = user_model.objects.create_user(
-            username="admin", password="password", is_staff=True
+            email="admin@example.com", password="password", is_staff=True
         )
         admin_token = str(RefreshToken.for_user(admin).access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {admin_token}")
