@@ -1,0 +1,60 @@
+Plan para crear un usuario administrador y validar accesos por nivel de usuario
+===========================================================================
+
+1) Preparar el entorno
+----------------------
+- Dentro de `backend/`, crea y activa el entorno virtual: `python -m venv .venv && source .venv/bin/activate`.
+- Instala dependencias: `pip install -r requirements.txt`.
+- Aplica migraciones: `python manage.py migrate`.
+
+2) Crear un usuario con permisos de administrador
+-----------------------------------------------
+Opción A (rápida, recomendada para desarrollo)
+- Ejecuta `python manage.py seed_admin`.
+- Se asegura la existencia del grupo `admin` y genera/actualiza el usuario `admin@example.com` con contraseña `Admin123!`.
+- El usuario queda con `is_staff=True`, `is_superuser=True` y agregado al grupo `admin`.
+
+Opción B (manual, si necesitas un correo diferente)
+- Crea el superusuario: `python manage.py createsuperuser --email TU_CORREO` y sigue el asistente.
+- Ingresa a Django shell para asignar el grupo admin:
+  ```bash
+  python manage.py shell
+  >>> from django.contrib.auth.models import Group
+  >>> from django.contrib.auth import get_user_model
+  >>> User = get_user_model()
+  >>> admin_group, _ = Group.objects.get_or_create(name="admin")
+  >>> u = User.objects.get(email="TU_CORREO")
+  >>> u.is_staff = True; u.is_superuser = True; u.save()
+  >>> u.groups.add(admin_group)
+  >>> exit()
+  ```
+
+3) Crear un usuario estándar para pruebas
+-----------------------------------------
+- Usa el endpoint de registro: `POST /api/auth/register/` con JSON `{ "email": "usuario@example.com", "phone": "...", "password": "..." }`.
+- Alternativa rápida: `python manage.py seed_demo` crea el usuario demo documentado en `backend/README.md`.
+
+4) Obtener tokens JWT para cada usuario
+---------------------------------------
+- Admin: `curl -X POST http://localhost:8000/api/auth/login/ -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"Admin123!"}'`.
+- Usuario estándar: usa las mismas credenciales que registraste. El `access` devuelto se envía en el header `Authorization: Bearer <token>`.
+
+5) Verificar acceso a funcionalidades (lectura disponible para todos, escrituras solo admin)
+-------------------------------------------------------------------------------------------
+- Lecturas (admin y usuario estándar deberían recibir HTTP 200):
+  - `GET /api/productos/`
+  - `GET /api/facturas/`
+  - `GET /api/envios/` y `GET /api/estadisticas/dominios/`
+  - `GET /api/clientes/`
+- Escrituras (solo admin; usuarios estándar deberían recibir 403):
+  - `POST /api/productos/` con JSON de un producto.
+  - `POST /api/clientes/` para registrar un cliente.
+  - `POST /api/facturas/emitir` para emitir una factura.
+- Ejemplo de prueba rápida: con el token del usuario estándar, ejecuta `curl -H "Authorization: Bearer <TOKEN_USER>" http://localhost:8000/api/productos/` (esperado 200). Luego repite con `-X POST` y cuerpo JSON de producto (esperado 403). Con el token admin, ambos deberían devolver 200/201 según corresponda.
+
+6) Acceso al panel Django admin (opcional)
+-----------------------------------------
+- Inicia el servidor: `python manage.py runserver 0.0.0.0:8000`.
+- Ingresa a `http://localhost:8000/admin/` con el usuario admin para crear/editar registros y confirmar permisos visualmente.
+
+Con estos pasos queda documentada la creación de un administrador y la validación de que cada nivel de usuario puede ejecutar las funciones previstas (lecturas para todos los autenticados y operaciones de escritura reservadas a administradores).
