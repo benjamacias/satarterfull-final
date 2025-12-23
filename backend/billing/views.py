@@ -19,7 +19,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission
+from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
 # from rest_framework.exceptions import ValidationError
 
@@ -41,13 +41,11 @@ from afip.fe_service import emitir_y_guardar_factura
 from trips.models import CPEAutomotor
 
 
-class AdminWriteAuthenticatedRead(BasePermission):
-    """Allow authenticated reads and restrict writes to staff users."""
+class AuthenticatedAccess(BasePermission):
+    """Allow authenticated users to read and write."""
 
     def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return bool(request.user and request.user.is_authenticated)
-        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+        return bool(request.user and request.user.is_authenticated)
 
 
 def _normalize_tax_id(value: str | None) -> str:
@@ -66,10 +64,10 @@ class TarifaProductoViewSet(
 ):
     queryset = Product.objects.all().order_by("name")
     serializer_class = TarifaSerializer
-    permission_classes = [AdminWriteAuthenticatedRead]
+    permission_classes = [AuthenticatedAccess]
 
 class FacturacionViewSet(viewsets.ViewSet):
-    permission_classes = [AdminWriteAuthenticatedRead]
+    permission_classes = [AuthenticatedAccess]
 
     @action(
         detail=False,
