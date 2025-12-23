@@ -14,10 +14,10 @@ class FacturacionAPITestCase(APITestCase):
     def setUp(self):
         user_model = get_user_model()
         self.admin = user_model.objects.create_user(
-            username="admin", password="password", is_staff=True
+            email="admin@example.com", password="password", is_staff=True
         )
         self.user = user_model.objects.create_user(
-            username="user", password="password", is_staff=False
+            email="user@example.com", password="password", is_staff=False
         )
         self.admin_token = str(RefreshToken.for_user(self.admin).access_token)
         self.user_token = str(RefreshToken.for_user(self.user).access_token)

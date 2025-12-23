@@ -8,13 +8,13 @@ class AuthEndpointsTestCase(APITestCase):
     def setUp(self):
         user_model = get_user_model()
         self.user = user_model.objects.create_user(
-            username="user", password="password", is_staff=False
+            email="user@example.com", password="password", is_staff=False
         )
 
     def test_login_returns_tokens(self):
         response = self.client.post(
             "/api/auth/login/",
-            {"username": "user", "password": "password"},
+            {"email": "user@example.com", "password": "password"},
             format="json",
         )
 
