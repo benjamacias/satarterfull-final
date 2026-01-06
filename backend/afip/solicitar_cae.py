@@ -347,11 +347,9 @@ def consultar_ultimo_comprobante(session, token, sign, cuit, pto_vta, cbte_tipo)
 
 
 def _read_wsaa_credentials() -> tuple[str, str]:
-    with open("secrets/token.txt") as f:
-        token = f.read().strip()
-    with open("secrets/sign.txt") as f:
-        sign = f.read().strip()
-    return token, sign
+    from .wsaa import get_token_sign
+
+    return get_token_sign(service="wsfe")
 
 
 def consultar_tipos_comprobante(session, token, sign, cuit, pto_vta) -> List[int]:
@@ -451,8 +449,62 @@ def _extract_messages(tree: ET.Element, tag: str) -> List[str]:
     return messages
 
 
+def _sanitize_payload(payload: str, secrets: List[str]) -> str:
+    sanitized = payload
+    for secret in secrets:
+        if secret:
+            sanitized = sanitized.replace(secret, "***")
+    return sanitized
+
+
 # Códigos de comprobantes que representan notas de crédito y débito
 NOTE_CBTE_TIPOS: Final = frozenset({2, 3, 7, 8, 12, 13})
+IVA_RATE_BY_ID: Final = {
+    Decimal("0.00"): 3,
+    Decimal("0.105"): 4,
+    Decimal("0.21"): 5,
+    Decimal("0.27"): 6,
+}
+
+
+def _calculate_iva_breakdown(
+    total: Decimal,
+    iva_rate: Decimal,
+    cbte_tipo: int,
+) -> tuple[Decimal, Decimal, str, List[Decimal]]:
+    iva_rate = iva_rate.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    if cbte_tipo in {11, 12, 13}:
+        iva_rate = Decimal("0.00")
+
+    if total == 0:
+        return Decimal("0.00"), Decimal("0.00"), "", []
+
+    if iva_rate < 0:
+        raise ValueError("La tasa de IVA no puede ser negativa.")
+
+    if iva_rate == 0:
+        imp_neto = total
+        imp_iva = Decimal("0.00")
+    else:
+        divisor = Decimal("1.00") + iva_rate
+        imp_neto = (total / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        imp_iva = (total - imp_neto).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    iva_id = IVA_RATE_BY_ID.get(iva_rate)
+    if iva_id is None:
+        raise ValueError(f"Tasa de IVA no soportada: {iva_rate}")
+
+    iva_xml = (
+        "<ar:Iva>"
+        "<ar:AlicIva>"
+        f"<ar:Id>{iva_id}</ar:Id>"
+        f"<ar:BaseImp>{imp_neto:.2f}</ar:BaseImp>"
+        f"<ar:Importe>{imp_iva:.2f}</ar:Importe>"
+        "</ar:AlicIva>"
+        "</ar:Iva>"
+    )
+
+    return imp_neto, imp_iva, iva_xml, [imp_iva]
 
 
 def solicitar_cae(
@@ -476,6 +528,7 @@ def solicitar_cae(
     condicion_iva_receptor_id: Optional[int] = 5,
     cbtes_asoc: Optional[Union[dict, List[dict]]] = None,   # {"tipo": 11, "pto_vta": 3, "nro": 8, "cuit": "...", "cbte_fch": "YYYYMMDD"}
     periodo_asoc: Optional[dict] = None,                    # {"desde": "YYYYMMDD|YYYY-MM-DD", "hasta": "..."}
+    iva_rate: Union[str, float, Decimal] = "0.21",
 ):
     # Lee token/sign del WSAA previamente generados
     token, sign = _read_wsaa_credentials()
@@ -511,10 +564,24 @@ def solicitar_cae(
     fch_vto = payment_due_value.strftime("%Y%m%d")
 
     # ======================
-    # Totales (C → sin IVA)
+    # Totales + IVA
     # ======================
     total = _format_decimal(importe)
     moneda_cotizacion = Decimal(str(moneda_cotiz)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+    iva_rate_decimal = Decimal(str(iva_rate))
+    imp_neto, imp_iva, iva_xml, iva_items = _calculate_iva_breakdown(
+        total, iva_rate_decimal, cbte_tipo
+    )
+    imp_total_calc = (imp_neto + imp_iva).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if imp_total_calc != total:
+        raise ValueError(
+            f"ImpTotal inválido. Esperado {imp_total_calc:.2f} y recibido {total:.2f}."
+        )
+    iva_sum = sum(iva_items, Decimal("0.00")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if iva_sum != imp_iva:
+        raise ValueError(
+            f"ImpIVA inválido. La suma de IVA es {iva_sum:.2f} y ImpIVA es {imp_iva:.2f}."
+        )
 
     doc_nro_digits = "".join(ch for ch in str(doc_nro or "") if ch.isdigit())
     if not doc_nro_digits:
@@ -575,6 +642,17 @@ def solicitar_cae(
             "</ar:PeriodoAsoc>"
         )
 
+    imp_trib = Decimal("0.00")
+    imp_op_ex = Decimal("0.00")
+    imp_total_check = (imp_neto + imp_iva + imp_trib + imp_op_ex).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    if imp_total_check != total:
+        raise ValueError(
+            f"ImpTotal inválido. ImpNeto + ImpIVA + ImpTrib + ImpOpEx = {imp_total_check:.2f}, "
+            f"pero ImpTotal es {total:.2f}."
+        )
+
     # ======================
     # SOAP body
     # ======================
@@ -604,16 +682,17 @@ def solicitar_cae(
             <ar:CbteFch>{cbte_fch}</ar:CbteFch>
             <ar:ImpTotal>{total:.2f}</ar:ImpTotal>
             <ar:ImpTotConc>0.00</ar:ImpTotConc>
-            <ar:ImpNeto>{total:.2f}</ar:ImpNeto>
-            <ar:ImpOpEx>0.00</ar:ImpOpEx>
-            <ar:ImpTrib>0.00</ar:ImpTrib>
-            <ar:ImpIVA>0.00</ar:ImpIVA>
+            <ar:ImpNeto>{imp_neto:.2f}</ar:ImpNeto>
+            <ar:ImpOpEx>{imp_op_ex:.2f}</ar:ImpOpEx>
+            <ar:ImpTrib>{imp_trib:.2f}</ar:ImpTrib>
+            <ar:ImpIVA>{imp_iva:.2f}</ar:ImpIVA>
             {cond_iva_xml}
             <ar:FchServDesde>{fch_desde}</ar:FchServDesde>
             <ar:FchServHasta>{fch_hasta}</ar:FchServHasta>
             <ar:FchVtoPago>{fch_vto}</ar:FchVtoPago>
             <ar:MonId>{moneda_id}</ar:MonId>
             <ar:MonCotiz>{moneda_cotizacion:.3f}</ar:MonCotiz>
+            {iva_xml}
             {cbtes_asoc_xml}
             {periodo_asoc_xml}
           </ar:FECAEDetRequest>
@@ -631,10 +710,20 @@ def solicitar_cae(
 
     fault = tree.find(".//faultstring")
     if fault is not None and fault.text:
+        LOGGER.error(
+            "AFIP fault en FECAESolicitar. Request=%s Response=%s",
+            _sanitize_payload(soap_body, [token, sign]),
+            _sanitize_payload(response.text, [token, sign]),
+        )
         raise RuntimeError(fault.text.strip())
 
     errors = _extract_messages(tree, "Err")
     if errors:
+        LOGGER.error(
+            "AFIP errores en FECAESolicitar. Request=%s Response=%s",
+            _sanitize_payload(soap_body, [token, sign]),
+            _sanitize_payload(response.text, [token, sign]),
+        )
         raise RuntimeError("AFIP devolvió errores: " + "; ".join(errors))
 
     observations = _extract_messages(tree, "Obs")
@@ -652,12 +741,28 @@ def solicitar_cae(
 
     events = _extract_events(tree)
 
-    cae = tree.findtext(".//{http://ar.gov.afip.dif.FEV1/}CAE")
+    namespace = "{http://ar.gov.afip.dif.FEV1/}"
+    cae = tree.findtext(f".//{namespace}CAE")
+    resultado = tree.findtext(f".//{namespace}Resultado")
     if not cae:
+        details: List[str] = []
+        if resultado:
+            details.append(f"Resultado={resultado}")
+        if observations:
+            details.append("Observaciones: " + "; ".join(observations))
+        if events:
+            details.append("Eventos: " + "; ".join(events))
+        if details:
+            LOGGER.error(
+                "AFIP sin CAE en FECAESolicitar. Request=%s Response=%s",
+                _sanitize_payload(soap_body, [token, sign]),
+                _sanitize_payload(response.text, [token, sign]),
+            )
+            raise RuntimeError("AFIP no devolvió un CAE. " + " | ".join(details))
         raise RuntimeError("AFIP no devolvió un CAE en la respuesta")
 
-    cae_vto = tree.findtext(".//{http://ar.gov.afip.dif.FEV1/}CAEFchVto") or ""
-    cbte_resp = tree.findtext(".//{http://ar.gov.afip.dif.FEV1/}CbteDesde") or str(cbte_nro)
+    cae_vto = tree.findtext(f".//{namespace}CAEFchVto") or ""
+    cbte_resp = tree.findtext(f".//{namespace}CbteDesde") or str(cbte_nro)
     try:
         cbte_resp_int = int(cbte_resp)
     except (TypeError, ValueError):
