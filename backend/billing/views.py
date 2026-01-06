@@ -120,6 +120,7 @@ class FacturacionViewSet(viewsets.ViewSet):
                 doc_tipo=s.validated_data["doc_tipo"],
                 doc_nro=s.validated_data["doc_nro"],
                 condicion_iva_receptor_id=s.validated_data.get("condicion_iva_receptor_id", 5),
+                iva_rate=s.validated_data.get("iva_rate"),
                 cbtes_asoc=s.validated_data.get("cbtes_asoc"),
                 periodo_asoc=s.validated_data.get("periodo_asoc"),
             )

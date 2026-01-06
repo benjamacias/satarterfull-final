@@ -164,6 +164,13 @@ class EmitirFacturaSerializer(serializers.Serializer):
     doc_tipo = serializers.IntegerField(default=80)  # 80 CUIT
     doc_nro = serializers.CharField()
     condicion_iva_receptor_id = serializers.IntegerField(required=False, allow_null=True)
+    iva_rate = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        required=False,
+        allow_null=True,
+        min_value=0,
+    )
     cbtes_asoc = CbtesAsocField(required=False)
     periodo_asoc = PeriodoAsocField(required=False)
 
