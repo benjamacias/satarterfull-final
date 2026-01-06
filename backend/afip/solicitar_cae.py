@@ -449,6 +449,14 @@ def _extract_messages(tree: ET.Element, tag: str) -> List[str]:
     return messages
 
 
+def _sanitize_payload(payload: str, secrets: List[str]) -> str:
+    sanitized = payload
+    for secret in secrets:
+        if secret:
+            sanitized = sanitized.replace(secret, "***")
+    return sanitized
+
+
 # Códigos de comprobantes que representan notas de crédito y débito
 NOTE_CBTE_TIPOS: Final = frozenset({2, 3, 7, 8, 12, 13})
 
@@ -643,10 +651,20 @@ def solicitar_cae(
 
     fault = tree.find(".//faultstring")
     if fault is not None and fault.text:
+        LOGGER.error(
+            "AFIP fault en FECAESolicitar. Request=%s Response=%s",
+            _sanitize_payload(soap_body, [token, sign]),
+            _sanitize_payload(response.text, [token, sign]),
+        )
         raise RuntimeError(fault.text.strip())
 
     errors = _extract_messages(tree, "Err")
     if errors:
+        LOGGER.error(
+            "AFIP errores en FECAESolicitar. Request=%s Response=%s",
+            _sanitize_payload(soap_body, [token, sign]),
+            _sanitize_payload(response.text, [token, sign]),
+        )
         raise RuntimeError("AFIP devolvió errores: " + "; ".join(errors))
 
     observations = _extract_messages(tree, "Obs")
@@ -676,6 +694,11 @@ def solicitar_cae(
         if events:
             details.append("Eventos: " + "; ".join(events))
         if details:
+            LOGGER.error(
+                "AFIP sin CAE en FECAESolicitar. Request=%s Response=%s",
+                _sanitize_payload(soap_body, [token, sign]),
+                _sanitize_payload(response.text, [token, sign]),
+            )
             raise RuntimeError("AFIP no devolvió un CAE. " + " | ".join(details))
         raise RuntimeError("AFIP no devolvió un CAE en la respuesta")
 
