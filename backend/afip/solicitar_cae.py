@@ -459,6 +459,52 @@ def _sanitize_payload(payload: str, secrets: List[str]) -> str:
 
 # Códigos de comprobantes que representan notas de crédito y débito
 NOTE_CBTE_TIPOS: Final = frozenset({2, 3, 7, 8, 12, 13})
+IVA_RATE_BY_ID: Final = {
+    Decimal("0.00"): 3,
+    Decimal("0.105"): 4,
+    Decimal("0.21"): 5,
+    Decimal("0.27"): 6,
+}
+
+
+def _calculate_iva_breakdown(
+    total: Decimal,
+    iva_rate: Decimal,
+    cbte_tipo: int,
+) -> tuple[Decimal, Decimal, str, List[Decimal]]:
+    iva_rate = iva_rate.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    if cbte_tipo in {11, 12, 13}:
+        iva_rate = Decimal("0.00")
+
+    if total == 0:
+        return Decimal("0.00"), Decimal("0.00"), "", []
+
+    if iva_rate < 0:
+        raise ValueError("La tasa de IVA no puede ser negativa.")
+
+    if iva_rate == 0:
+        imp_neto = total
+        imp_iva = Decimal("0.00")
+    else:
+        divisor = Decimal("1.00") + iva_rate
+        imp_neto = (total / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        imp_iva = (total - imp_neto).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    iva_id = IVA_RATE_BY_ID.get(iva_rate)
+    if iva_id is None:
+        raise ValueError(f"Tasa de IVA no soportada: {iva_rate}")
+
+    iva_xml = (
+        "<ar:Iva>"
+        "<ar:AlicIva>"
+        f"<ar:Id>{iva_id}</ar:Id>"
+        f"<ar:BaseImp>{imp_neto:.2f}</ar:BaseImp>"
+        f"<ar:Importe>{imp_iva:.2f}</ar:Importe>"
+        "</ar:AlicIva>"
+        "</ar:Iva>"
+    )
+
+    return imp_neto, imp_iva, iva_xml, [imp_iva]
 
 
 def solicitar_cae(
@@ -482,6 +528,7 @@ def solicitar_cae(
     condicion_iva_receptor_id: Optional[int] = 5,
     cbtes_asoc: Optional[Union[dict, List[dict]]] = None,   # {"tipo": 11, "pto_vta": 3, "nro": 8, "cuit": "...", "cbte_fch": "YYYYMMDD"}
     periodo_asoc: Optional[dict] = None,                    # {"desde": "YYYYMMDD|YYYY-MM-DD", "hasta": "..."}
+    iva_rate: Union[str, float, Decimal] = "0.21",
 ):
     # Lee token/sign del WSAA previamente generados
     token, sign = _read_wsaa_credentials()
@@ -517,10 +564,24 @@ def solicitar_cae(
     fch_vto = payment_due_value.strftime("%Y%m%d")
 
     # ======================
-    # Totales (C → sin IVA)
+    # Totales + IVA
     # ======================
     total = _format_decimal(importe)
     moneda_cotizacion = Decimal(str(moneda_cotiz)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+    iva_rate_decimal = Decimal(str(iva_rate))
+    imp_neto, imp_iva, iva_xml, iva_items = _calculate_iva_breakdown(
+        total, iva_rate_decimal, cbte_tipo
+    )
+    imp_total_calc = (imp_neto + imp_iva).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if imp_total_calc != total:
+        raise ValueError(
+            f"ImpTotal inválido. Esperado {imp_total_calc:.2f} y recibido {total:.2f}."
+        )
+    iva_sum = sum(iva_items, Decimal("0.00")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if iva_sum != imp_iva:
+        raise ValueError(
+            f"ImpIVA inválido. La suma de IVA es {iva_sum:.2f} y ImpIVA es {imp_iva:.2f}."
+        )
 
     doc_nro_digits = "".join(ch for ch in str(doc_nro or "") if ch.isdigit())
     if not doc_nro_digits:
@@ -581,6 +642,15 @@ def solicitar_cae(
             "</ar:PeriodoAsoc>"
         )
 
+    imp_trib = Decimal("0.00")
+    imp_op_ex = Decimal("0.00")
+    imp_total_check = (imp_neto + imp_iva + imp_trib + imp_op_ex).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    if imp_total_check != total:
+        raise ValueError(
+            f"ImpTotal inválido. ImpNeto + ImpIVA + ImpTrib + ImpOpEx = {imp_total_check:.2f}, "
+            f"pero ImpTotal es {total:.2f}."
     # ----- IVA (AFIP exige nodo IVA cuando ImpNeto > 0) -----
     iva_xml = ""
     if total > 0 and cbte_tipo in {11, 12, 13}:
@@ -623,10 +693,10 @@ def solicitar_cae(
             <ar:CbteFch>{cbte_fch}</ar:CbteFch>
             <ar:ImpTotal>{total:.2f}</ar:ImpTotal>
             <ar:ImpTotConc>0.00</ar:ImpTotConc>
-            <ar:ImpNeto>{total:.2f}</ar:ImpNeto>
-            <ar:ImpOpEx>0.00</ar:ImpOpEx>
-            <ar:ImpTrib>0.00</ar:ImpTrib>
-            <ar:ImpIVA>0.00</ar:ImpIVA>
+            <ar:ImpNeto>{imp_neto:.2f}</ar:ImpNeto>
+            <ar:ImpOpEx>{imp_op_ex:.2f}</ar:ImpOpEx>
+            <ar:ImpTrib>{imp_trib:.2f}</ar:ImpTrib>
+            <ar:ImpIVA>{imp_iva:.2f}</ar:ImpIVA>
             {cond_iva_xml}
             <ar:FchServDesde>{fch_desde}</ar:FchServDesde>
             <ar:FchServHasta>{fch_hasta}</ar:FchServHasta>

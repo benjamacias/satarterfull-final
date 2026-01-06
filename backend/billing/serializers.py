@@ -222,6 +222,7 @@ class ClientSerializer(serializers.ModelSerializer):
             "fiscal_address",
             "tax_condition",
             "tax_condition_display",
+            "iva_rate",
         ]
         extra_kwargs = {
             "name": {"allow_blank": False},
@@ -252,6 +253,11 @@ class ClientSerializer(serializers.ModelSerializer):
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Ingresá la dirección fiscal del cliente.")
+        return value
+
+    def validate_iva_rate(self, value: Decimal) -> Decimal:
+        if value < 0 or value > 1:
+            raise serializers.ValidationError("La tasa de IVA debe estar entre 0 y 1.")
         return value
 
 
