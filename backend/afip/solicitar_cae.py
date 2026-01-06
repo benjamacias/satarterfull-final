@@ -651,6 +651,17 @@ def solicitar_cae(
         raise ValueError(
             f"ImpTotal inválido. ImpNeto + ImpIVA + ImpTrib + ImpOpEx = {imp_total_check:.2f}, "
             f"pero ImpTotal es {total:.2f}."
+    # ----- IVA (AFIP exige nodo IVA cuando ImpNeto > 0) -----
+    iva_xml = ""
+    if total > 0 and cbte_tipo in {11, 12, 13}:
+        iva_xml = (
+            "<ar:Iva>"
+            "<ar:AlicIva>"
+            "<ar:Id>3</ar:Id>"
+            f"<ar:BaseImp>{total:.2f}</ar:BaseImp>"
+            "<ar:Importe>0.00</ar:Importe>"
+            "</ar:AlicIva>"
+            "</ar:Iva>"
         )
 
     # ======================
