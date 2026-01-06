@@ -347,11 +347,9 @@ def consultar_ultimo_comprobante(session, token, sign, cuit, pto_vta, cbte_tipo)
 
 
 def _read_wsaa_credentials() -> tuple[str, str]:
-    with open("secrets/token.txt") as f:
-        token = f.read().strip()
-    with open("secrets/sign.txt") as f:
-        sign = f.read().strip()
-    return token, sign
+    from .wsaa import get_token_sign
+
+    return get_token_sign(service="wsfe")
 
 
 def consultar_tipos_comprobante(session, token, sign, cuit, pto_vta) -> List[int]:
@@ -449,6 +447,14 @@ def _extract_messages(tree: ET.Element, tag: str) -> List[str]:
         elif msg:
             messages.append(msg)
     return messages
+
+
+def _sanitize_payload(payload: str, secrets: List[str]) -> str:
+    sanitized = payload
+    for secret in secrets:
+        if secret:
+            sanitized = sanitized.replace(secret, "***")
+    return sanitized
 
 
 # Códigos de comprobantes que representan notas de crédito y débito
@@ -575,6 +581,19 @@ def solicitar_cae(
             "</ar:PeriodoAsoc>"
         )
 
+    # ----- IVA (AFIP exige nodo IVA cuando ImpNeto > 0) -----
+    iva_xml = ""
+    if total > 0 and cbte_tipo in {11, 12, 13}:
+        iva_xml = (
+            "<ar:Iva>"
+            "<ar:AlicIva>"
+            "<ar:Id>3</ar:Id>"
+            f"<ar:BaseImp>{total:.2f}</ar:BaseImp>"
+            "<ar:Importe>0.00</ar:Importe>"
+            "</ar:AlicIva>"
+            "</ar:Iva>"
+        )
+
     # ======================
     # SOAP body
     # ======================
@@ -614,6 +633,7 @@ def solicitar_cae(
             <ar:FchVtoPago>{fch_vto}</ar:FchVtoPago>
             <ar:MonId>{moneda_id}</ar:MonId>
             <ar:MonCotiz>{moneda_cotizacion:.3f}</ar:MonCotiz>
+            {iva_xml}
             {cbtes_asoc_xml}
             {periodo_asoc_xml}
           </ar:FECAEDetRequest>
@@ -631,10 +651,20 @@ def solicitar_cae(
 
     fault = tree.find(".//faultstring")
     if fault is not None and fault.text:
+        LOGGER.error(
+            "AFIP fault en FECAESolicitar. Request=%s Response=%s",
+            _sanitize_payload(soap_body, [token, sign]),
+            _sanitize_payload(response.text, [token, sign]),
+        )
         raise RuntimeError(fault.text.strip())
 
     errors = _extract_messages(tree, "Err")
     if errors:
+        LOGGER.error(
+            "AFIP errores en FECAESolicitar. Request=%s Response=%s",
+            _sanitize_payload(soap_body, [token, sign]),
+            _sanitize_payload(response.text, [token, sign]),
+        )
         raise RuntimeError("AFIP devolvió errores: " + "; ".join(errors))
 
     observations = _extract_messages(tree, "Obs")
@@ -652,12 +682,28 @@ def solicitar_cae(
 
     events = _extract_events(tree)
 
-    cae = tree.findtext(".//{http://ar.gov.afip.dif.FEV1/}CAE")
+    namespace = "{http://ar.gov.afip.dif.FEV1/}"
+    cae = tree.findtext(f".//{namespace}CAE")
+    resultado = tree.findtext(f".//{namespace}Resultado")
     if not cae:
+        details: List[str] = []
+        if resultado:
+            details.append(f"Resultado={resultado}")
+        if observations:
+            details.append("Observaciones: " + "; ".join(observations))
+        if events:
+            details.append("Eventos: " + "; ".join(events))
+        if details:
+            LOGGER.error(
+                "AFIP sin CAE en FECAESolicitar. Request=%s Response=%s",
+                _sanitize_payload(soap_body, [token, sign]),
+                _sanitize_payload(response.text, [token, sign]),
+            )
+            raise RuntimeError("AFIP no devolvió un CAE. " + " | ".join(details))
         raise RuntimeError("AFIP no devolvió un CAE en la respuesta")
 
-    cae_vto = tree.findtext(".//{http://ar.gov.afip.dif.FEV1/}CAEFchVto") or ""
-    cbte_resp = tree.findtext(".//{http://ar.gov.afip.dif.FEV1/}CbteDesde") or str(cbte_nro)
+    cae_vto = tree.findtext(f".//{namespace}CAEFchVto") or ""
+    cbte_resp = tree.findtext(f".//{namespace}CbteDesde") or str(cbte_nro)
     try:
         cbte_resp_int = int(cbte_resp)
     except (TypeError, ValueError):
