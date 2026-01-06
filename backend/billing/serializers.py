@@ -164,6 +164,13 @@ class EmitirFacturaSerializer(serializers.Serializer):
     doc_tipo = serializers.IntegerField(default=80)  # 80 CUIT
     doc_nro = serializers.CharField()
     condicion_iva_receptor_id = serializers.IntegerField(required=False, allow_null=True)
+    iva_rate = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        required=False,
+        allow_null=True,
+        min_value=0,
+    )
     cbtes_asoc = CbtesAsocField(required=False)
     periodo_asoc = PeriodoAsocField(required=False)
 
@@ -222,6 +229,7 @@ class ClientSerializer(serializers.ModelSerializer):
             "fiscal_address",
             "tax_condition",
             "tax_condition_display",
+            "iva_rate",
         ]
         extra_kwargs = {
             "name": {"allow_blank": False},
@@ -252,6 +260,11 @@ class ClientSerializer(serializers.ModelSerializer):
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Ingresá la dirección fiscal del cliente.")
+        return value
+
+    def validate_iva_rate(self, value: Decimal) -> Decimal:
+        if value < 0 or value > 1:
+            raise serializers.ValidationError("La tasa de IVA debe estar entre 0 y 1.")
         return value
 
 

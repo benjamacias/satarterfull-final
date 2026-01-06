@@ -16,6 +16,7 @@ class Client(models.Model):
         choices=CONDICION_IVA_CHOICES,
         default=5,
     )
+    iva_rate = models.DecimalField(max_digits=5, decimal_places=4, default=0.21)
 
     def __str__(self):
         return f"{self.name} <{self.email}>"

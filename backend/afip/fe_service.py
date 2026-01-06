@@ -21,9 +21,11 @@ def emitir_y_guardar_factura(
     doc_tipo: int,
     doc_nro: str,
     condicion_iva_receptor_id: int | None = 5,
+    iva_rate=None,
     cbtes_asoc=None,
     periodo_asoc=None,
 ):
+    iva_rate_value = iva_rate if iva_rate is not None else client.iva_rate
     cae_kwargs = {
         "cuit": "30716004720",
         "pto_vta": pto_vta,
@@ -33,6 +35,7 @@ def emitir_y_guardar_factura(
         "doc_tipo": doc_tipo,
         "doc_nro": doc_nro,
         "condicion_iva_receptor_id": condicion_iva_receptor_id,
+        "iva_rate": iva_rate_value,
     }
 
     tipos_validos = fe.obtener_tipos_comprobante_validos(cuit=cae_kwargs["cuit"], pto_vta=pto_vta)
@@ -49,6 +52,7 @@ def emitir_y_guardar_factura(
     # No Mocked result to bypass external CAE request
     metadata = {
         "condicion_iva_receptor_id": condicion_iva_receptor_id,
+        "iva_rate": str(iva_rate_value),
     }
     if cbtes_asoc:
         metadata["cbtes_asoc"] = cbtes_asoc
